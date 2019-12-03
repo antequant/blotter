@@ -1,12 +1,16 @@
 import asyncio
 import concurrent.futures as futures
 import logging
-from typing import Any, Optional
+from datetime import datetime
+from typing import Any, Optional, cast
 
 import grpc
 
 from blotter import blotter_pb2, blotter_pb2_grpc, model
 import ib_insync
+import pandas as pd
+
+from google.cloud import bigquery
 
 
 class Servicer(blotter_pb2_grpc.BlotterServicer):
@@ -15,27 +19,35 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         self._loop = eventLoop
         super().__init__()
 
-    # def LookUp(self, request: Any, context: Any) -> Any:
-    #     async def _coroutine() -> int:
-    #         contract = model.contract_from_lookup(request)
+    def LoadHistoricalData(self, request: Any, context: Any) -> None:
+        logging.debug(f"LoadHistoricalData: {request}")
 
-    #         logging.debug(f"Qualifying contract {contract}")
-    #         await self._ib_client.qualify_contract_inplace(contract)
-    #         logging.debug(f"Qualified contract: {contract}")
+        async def fetch_bars() -> pd.DataFrame:
+            con = model.contract_from_specifier(request.contractSpecifier)
+            await self._ib_client.qualifyContractsAsync(con)
 
-    #         return int(contract.conId)
+            barList = await self._ib_client.reqHistoricalDataAsync(
+                contract=con,
+                endDateTime=datetime.utcfromtimestamp(request.endTimestampUTC),
+                durationStr=model.duration_str(request.duration),
+                barSizeSetting=model.bar_size_str(request.barSize),
+                whatToShow=model.bar_source_str(request.barSource),
+                useRTH=request.regularTradingHoursOnly,
+            )
 
-    #     logging.debug(f"LookUp({request})")
-    #     conId = asyncio.run_coroutine_threadsafe(_coroutine(), self._loop).result()
-    #     if not conId:
-    #         raise RuntimeError(
-    #             f"Could not qualify contract <{request}> (it may be ambiguous)"
-    #         )
+            return ib_insync.util.df(barList)
 
-    #     return blotter_pb2.Contract(contractID=conId)
+        df = asyncio.run_coroutine_threadsafe(fetch_bars(), self._loop).result()
 
-    # def Subscribe(self, request: Any, context: Any) -> Any:
-    #     pass
+        client = bigquery.Client()
+        dataset_id = "tradesponder:blotter"
+        table_id = f"test_{request.contractSpecifier.symbol}"
+
+        dataset_ref = client.dataset(dataset_id)
+        table_ref = dataset_ref.table(table_id)
+
+        job = client.load_table_from_dataframe(df, table_ref)
+        job.result()
 
 
 def start(

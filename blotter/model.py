@@ -6,10 +6,11 @@ from typing import Any
 
 _ContractSpecifier: Any = blotter_pb2.ContractSpecifier
 
-def contract_from_lookup(lookup: Any) -> ib_insync.Contract:
+
+def contract_from_specifier(specifier: Any) -> ib_insync.Contract:
     """Converts a ContractLookup message into an ib_insync Contract object."""
 
-    _security_type_mapping = {
+    security_type_mapping = {
         _ContractSpecifier.SecurityType.STOCK: "STK",
         _ContractSpecifier.SecurityType.OPTION: "OPT",
         _ContractSpecifier.SecurityType.FUTURE: "FUT",
@@ -25,23 +26,74 @@ def contract_from_lookup(lookup: Any) -> ib_insync.Contract:
         _ContractSpecifier.SecurityType.FUND: "FUND",
     }
 
-    _right_mapping = {
+    right_mapping = {
         _ContractSpecifier.Right.UNSET: "",
         _ContractSpecifier.Right.PUT: "P",
         _ContractSpecifier.Right.CALL: "C",
     }
 
     return ib_insync.Contract(
-        symbol=lookup.symbol,
-        secType=_security_type_mapping[lookup.securityType],
-        lastTradeDateOrContractMonth=lookup.lastTradeDateOrContractMonth,
-        strike=Decimal(lookup.strike) if lookup.strike else 0.0,
-        right=_right_mapping[lookup.right],
-        multiplier=lookup.multiplier,
-        exchange=lookup.exchange,
-        currency=lookup.currency,
-        localSymbol=lookup.localSymbol,
-        primaryExchange=lookup.primaryExchange,
-        tradingClass=lookup.tradingClass,
-        includeExpired=lookup.includeExpired,
+        symbol=specifier.symbol,
+        secType=security_type_mapping[specifier.securityType],
+        lastTradeDateOrContractMonth=specifier.lastTradeDateOrContractMonth,
+        strike=Decimal(specifier.strike) if specifier.strike else 0.0,
+        right=right_mapping[specifier.right],
+        multiplier=specifier.multiplier,
+        exchange=specifier.exchange,
+        currency=specifier.currency,
+        localSymbol=specifier.localSymbol,
+        primaryExchange=specifier.primaryExchange,
+        tradingClass=specifier.tradingClass,
+        includeExpired=specifier.includeExpired,
     )
+
+
+_Duration: Any = blotter_pb2.Duration
+
+
+def duration_str(duration: Any) -> str:
+    time_unit_mapping = {
+        _Duration.TimeUnit.SECONDS: "S",
+        _Duration.TimeUnit.DAYS: "D",
+        _Duration.TimeUnit.WEEKS: "W",
+        _Duration.TimeUnit.MONTHS: "M",
+        _Duration.TimeUnit.YEARS: "Y",
+    }
+
+    return f"{duration.count} {time_unit_mapping[duration.unit]}"
+
+
+_LoadHistoricalDataRequest: Any = blotter_pb2.LoadHistoricalDataRequest
+
+
+def bar_size_str(bar_size: Any) -> str:
+    bar_size_mapping = {
+        _LoadHistoricalDataRequest.BarSize.ONE_SECOND: "1 secs",
+        _LoadHistoricalDataRequest.BarSize.FIVE_SECONDS: "5 secs",
+        _LoadHistoricalDataRequest.BarSize.TEN_SECONDS: "10 secs",
+        _LoadHistoricalDataRequest.BarSize.FIFTEEN_SECONDS: "15 secs",
+        _LoadHistoricalDataRequest.BarSize.THIRTY_SECONDS: "30 secs",
+        _LoadHistoricalDataRequest.BarSize.ONE_MINUTE: "1 min",
+        _LoadHistoricalDataRequest.BarSize.TWO_MINUTES: "2 mins",
+        _LoadHistoricalDataRequest.BarSize.THREE_MINUTES: "3 mins",
+        _LoadHistoricalDataRequest.BarSize.FIVE_MINUTES: "5 mins",
+        _LoadHistoricalDataRequest.BarSize.TEN_MINUTES: "10 mins",
+        _LoadHistoricalDataRequest.BarSize.FIFTEEN_MINUTES: "15 mins",
+        _LoadHistoricalDataRequest.BarSize.TWENTY_MINUTES: "20 mins",
+        _LoadHistoricalDataRequest.BarSize.THIRTY_MINUTES: "30 mins",
+        _LoadHistoricalDataRequest.BarSize.ONE_HOUR: "1 hour",
+        _LoadHistoricalDataRequest.BarSize.TWO_HOURS: "2 hours",
+        _LoadHistoricalDataRequest.BarSize.THREE_HOURS: "3 hours",
+        _LoadHistoricalDataRequest.BarSize.FOUR_HOURS: "4 hours",
+        _LoadHistoricalDataRequest.BarSize.EIGHT_HOURS: "8 hours",
+        _LoadHistoricalDataRequest.BarSize.ONE_DAY: "1 day",
+        _LoadHistoricalDataRequest.BarSize.ONE_WEEK: "1 week",
+        _LoadHistoricalDataRequest.BarSize.ONE_MONTH: "1 month",
+    }
+
+    return bar_size_mapping[bar_size]
+
+
+def bar_source_str(bar_source: Any) -> str:
+    return str(_LoadHistoricalDataRequest.BarSource.Name(bar_source))
+
