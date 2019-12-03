@@ -6,11 +6,11 @@ from typing import Any, Optional
 import grpc
 
 from blotter import blotter_pb2, blotter_pb2_grpc, model
-from blotter.ib import IBClient
+import ib_insync
 
 
 class Servicer(blotter_pb2_grpc.BlotterServicer):
-    def __init__(self, ib_client: IBClient, eventLoop: asyncio.AbstractEventLoop):
+    def __init__(self, ib_client: ib_insync.IB, eventLoop: asyncio.AbstractEventLoop):
         self._ib_client = ib_client
         self._loop = eventLoop
         super().__init__()
@@ -40,7 +40,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
 def start(
     port: int,
-    ib_client: IBClient,
+    ib_client: ib_insync.IB,
     eventLoop: Optional[asyncio.AbstractEventLoop] = None,
     executor: Optional[futures.ThreadPoolExecutor] = None,
 ) -> grpc.Server:
