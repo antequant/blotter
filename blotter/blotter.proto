@@ -1,0 +1,112 @@
+syntax = "proto3";
+package blotter;
+
+import "google/protobuf/empty.proto";
+
+message ContractSpecifier {
+    string symbol = 1;
+
+    enum SecurityType {
+        STOCK = 0;
+        OPTION = 1;
+        FUTURE = 2;
+        INDEX = 3;
+        FUTURES_OPTION = 4;
+        CASH = 5;
+        CFD = 6;
+        COMBO = 7;
+        WARRANT = 8;
+        BOND = 9;
+        COMMODITY = 10;
+        NEWS = 11;
+        FUND = 12;
+    }
+
+    SecurityType securityType = 2;
+    string lastTradeDateOrContractMonth = 3;
+    string strike = 4;
+
+    enum Right {
+        UNSPECIFIED_RIGHT = 0;
+        PUT = 1;
+        CALL = 2;
+    }
+
+    Right right = 5;
+    string multiplier = 6;
+    string exchange = 7;
+    string currency = 8;
+    string localSymbol = 9;
+    string primaryExchange = 10;
+    string tradingClass = 11;
+    bool includeExpired = 12;
+}
+
+message Duration {
+    enum TimeUnit {
+        SECONDS = 0;
+        DAYS = 1;
+        WEEKS = 2;
+        MONTHS = 3;
+        YEARS = 4;
+    }
+
+    int32 count = 1;
+    TimeUnit unit = 2;
+}
+
+message LoadHistoricalDataRequest {
+    enum BarSize {
+        UNSPECIFIED_SIZE = 0;
+        ONE_SECOND = 1;
+        FIVE_SECONDS = 5;
+        TEN_SECONDS = 10;
+        FIFTEEN_SECONDS = 15;
+        THIRTY_SECONDS = 30;
+        ONE_MINUTE = 60;
+        TWO_MINUTES = 120;
+        THREE_MINUTES = 180;
+        FIVE_MINUTES = 300;
+        TEN_MINUTES = 600;
+        FIFTEEN_MINUTES = 900;
+        TWENTY_MINUTES = 1200;
+        THIRTY_MINUTES = 1800;
+        ONE_HOUR = 3600;
+        TWO_HOURS = 7200;
+        THREE_HOURS = 10800;
+        FOUR_HOURS = 14400;
+        EIGHT_HOURS = 28800;
+        ONE_DAY = 86400;
+        ONE_WEEK = 604800;
+        ONE_MONTH = 2592000;
+    }
+
+    enum BarSource {
+        UNSPECIFIED_SOURCE = 0;
+        TRADES = 1;
+        MIDPOINT = 2;
+        BID = 3;
+        ASK = 4;
+        BID_ASK = 5;
+        ADJUSTED_LAST = 6;
+        HISTORICAL_VOLATILITY = 7;
+        OPTION_IMPLIED_VOLATILITY = 8;
+        REBATE_RATE = 9;
+        FEE_RATE = 10;
+        YIELD_BID = 11;
+        YIELD_ASK = 12;
+        YIELD_BID_ASK = 13;
+        YIELD_LAST = 14;
+    }
+
+    ContractSpecifier contractSpecifier = 1;
+    int64 endTimestampUTC = 2;
+    Duration duration = 3;
+    BarSize barSize = 4;
+    BarSource barSource = 5;
+    bool regularTradingHoursOnly = 6;
+}
+
+service Blotter {
+    rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (google.protobuf.Empty) {}
+}

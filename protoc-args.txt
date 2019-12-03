@@ -1,0 +1,4 @@
+-I.
+--python_out=.
+--grpc_python_out=.
+blotter\blotter.proto
