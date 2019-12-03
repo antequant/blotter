@@ -1,10 +1,9 @@
-from . import ibdatastream_pb2_grpc
+from . import blotter_pb2_grpc
 
 import grpc
 
 
-def new_test_client(
-    port: int, host: str = "localhost"
-) -> ibdatastream_pb2_grpc.IBDataStreamStub:
+def new_test_client(port: int, host: str = "localhost") -> blotter_pb2_grpc.BlotterStub:
     channel = grpc.insecure_channel(f"{host}:{port}")
-    return ibdatastream_pb2_grpc.IBDataStreamStub(channel)
+
+    return blotter_pb2_grpc.BlotterStub(channel)

@@ -5,37 +5,37 @@ from typing import Any, Optional
 
 import grpc
 
-from . import ibdatastream_pb2, ibdatastream_pb2_grpc, model
-from .ib import IBClient
+from blotter import blotter_pb2, blotter_pb2_grpc, model
+from blotter.ib import IBClient
 
 
-class Servicer(ibdatastream_pb2_grpc.IBDataStreamServicer):
+class Servicer(blotter_pb2_grpc.BlotterServicer):
     def __init__(self, ib_client: IBClient, eventLoop: asyncio.AbstractEventLoop):
         self._ib_client = ib_client
         self._loop = eventLoop
         super().__init__()
 
-    def LookUp(self, request: Any, context: Any) -> Any:
-        async def _coroutine() -> int:
-            contract = model.contract_from_lookup(request)
+    # def LookUp(self, request: Any, context: Any) -> Any:
+    #     async def _coroutine() -> int:
+    #         contract = model.contract_from_lookup(request)
 
-            logging.debug(f"Qualifying contract {contract}")
-            await self._ib_client.qualify_contract_inplace(contract)
-            logging.debug(f"Qualified contract: {contract}")
+    #         logging.debug(f"Qualifying contract {contract}")
+    #         await self._ib_client.qualify_contract_inplace(contract)
+    #         logging.debug(f"Qualified contract: {contract}")
 
-            return int(contract.conId)
+    #         return int(contract.conId)
 
-        logging.debug(f"LookUp({request})")
-        conId = asyncio.run_coroutine_threadsafe(_coroutine(), self._loop).result()
-        if not conId:
-            raise RuntimeError(
-                f"Could not qualify contract <{request}> (it may be ambiguous)"
-            )
+    #     logging.debug(f"LookUp({request})")
+    #     conId = asyncio.run_coroutine_threadsafe(_coroutine(), self._loop).result()
+    #     if not conId:
+    #         raise RuntimeError(
+    #             f"Could not qualify contract <{request}> (it may be ambiguous)"
+    #         )
 
-        return ibdatastream_pb2.Contract(contractID=conId)
+    #     return blotter_pb2.Contract(contractID=conId)
 
-    def Subscribe(self, request: Any, context: Any) -> Any:
-        pass
+    # def Subscribe(self, request: Any, context: Any) -> Any:
+    #     pass
 
 
 def start(
@@ -51,9 +51,7 @@ def start(
         executor = futures.ThreadPoolExecutor()
 
     s = grpc.server(executor)
-    ibdatastream_pb2_grpc.add_IBDataStreamServicer_to_server(
-        Servicer(ib_client, eventLoop), s
-    )
+    blotter_pb2_grpc.add_BlotterServicer_to_server(Servicer(ib_client, eventLoop), s)
     s.add_insecure_port(f"[::]:{port}")
     s.start()
 

@@ -10,9 +10,9 @@ from . import server
 from .ib import IBInSyncClient
 
 parser = ArgumentParser(
-    prog="ibdatastream",
-    description="Microservice to connect to Interactive Brokers and stream market data elsewhere",
-    epilog="For more information, or to report issues, please visit: https://github.com/jspahrsummers/ib-data-stream",
+    prog="blotter",
+    description="Microservice to connect to Interactive Brokers and stream market data into Google BigQuery",
+    epilog="For more information, or to report issues, please visit: https://github.com/jspahrsummers/blotter",
 )
 
 parser.add_argument(

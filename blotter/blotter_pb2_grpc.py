@@ -6,42 +6,43 @@ from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
 
 class BlotterStub(object):
-  # missing associated documentation comment in .proto file
-  pass
+    # missing associated documentation comment in .proto file
+    pass
 
-  def __init__(self, channel):
-    """Constructor.
+    def __init__(self, channel):
+        """Constructor.
 
     Args:
       channel: A grpc.Channel.
     """
-    self.LoadHistoricalData = channel.unary_unary(
-        '/blotter.Blotter/LoadHistoricalData',
-        request_serializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.SerializeToString,
-        response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+        self.LoadHistoricalData = channel.unary_unary(
+            "/blotter.Blotter/LoadHistoricalData",
+            request_serializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.SerializeToString,
+            response_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
         )
 
 
 class BlotterServicer(object):
-  # missing associated documentation comment in .proto file
-  pass
-
-  def LoadHistoricalData(self, request, context):
     # missing associated documentation comment in .proto file
     pass
-    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-    context.set_details('Method not implemented!')
-    raise NotImplementedError('Method not implemented!')
+
+    def LoadHistoricalData(self, request, context):
+        # missing associated documentation comment in .proto file
+        pass
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
 
 def add_BlotterServicer_to_server(servicer, server):
-  rpc_method_handlers = {
-      'LoadHistoricalData': grpc.unary_unary_rpc_method_handler(
-          servicer.LoadHistoricalData,
-          request_deserializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.FromString,
-          response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-      ),
-  }
-  generic_handler = grpc.method_handlers_generic_handler(
-      'blotter.Blotter', rpc_method_handlers)
-  server.add_generic_rpc_handlers((generic_handler,))
+    rpc_method_handlers = {
+        "LoadHistoricalData": grpc.unary_unary_rpc_method_handler(
+            servicer.LoadHistoricalData,
+            request_deserializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.FromString,
+            response_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+        ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+        "blotter.Blotter", rpc_method_handlers
+    )
+    server.add_generic_rpc_handlers((generic_handler,))

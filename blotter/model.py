@@ -1,37 +1,37 @@
-from . import ibdatastream_pb2, ib
+from blotter import blotter_pb2
 from decimal import Decimal
+import ib_insync
 
 from typing import Any
 
-_ContractLookup: Any = ibdatastream_pb2.ContractLookup
+_ContractSpecifier: Any = blotter_pb2.ContractSpecifier
 
-_security_type_mapping = {
-    _ContractLookup.SecurityType.STOCK: "STK",
-    _ContractLookup.SecurityType.OPTION: "OPT",
-    _ContractLookup.SecurityType.FUTURE: "FUT",
-    _ContractLookup.SecurityType.INDEX: "IND",
-    _ContractLookup.SecurityType.FUTURES_OPTION: "FOP",
-    _ContractLookup.SecurityType.CASH: "CASH",
-    _ContractLookup.SecurityType.CFD: "CFD",
-    _ContractLookup.SecurityType.COMBO: "BAG",
-    _ContractLookup.SecurityType.WARRANT: "WAR",
-    _ContractLookup.SecurityType.BOND: "BOND",
-    _ContractLookup.SecurityType.COMMODITY: "CMDTY",
-    _ContractLookup.SecurityType.NEWS: "NEWS",
-    _ContractLookup.SecurityType.FUND: "FUND",
-}
-
-_right_mapping = {
-    _ContractLookup.Right.UNSET: "",
-    _ContractLookup.Right.PUT: "P",
-    _ContractLookup.Right.CALL: "C",
-}
-
-
-def contract_from_lookup(lookup: Any) -> ib.Contract:
+def contract_from_lookup(lookup: Any) -> ib_insync.Contract:
     """Converts a ContractLookup message into an ib_insync Contract object."""
 
-    return ib.Contract(
+    _security_type_mapping = {
+        _ContractSpecifier.SecurityType.STOCK: "STK",
+        _ContractSpecifier.SecurityType.OPTION: "OPT",
+        _ContractSpecifier.SecurityType.FUTURE: "FUT",
+        _ContractSpecifier.SecurityType.INDEX: "IND",
+        _ContractSpecifier.SecurityType.FUTURES_OPTION: "FOP",
+        _ContractSpecifier.SecurityType.CASH: "CASH",
+        _ContractSpecifier.SecurityType.CFD: "CFD",
+        _ContractSpecifier.SecurityType.COMBO: "BAG",
+        _ContractSpecifier.SecurityType.WARRANT: "WAR",
+        _ContractSpecifier.SecurityType.BOND: "BOND",
+        _ContractSpecifier.SecurityType.COMMODITY: "CMDTY",
+        _ContractSpecifier.SecurityType.NEWS: "NEWS",
+        _ContractSpecifier.SecurityType.FUND: "FUND",
+    }
+
+    _right_mapping = {
+        _ContractSpecifier.Right.UNSET: "",
+        _ContractSpecifier.Right.PUT: "P",
+        _ContractSpecifier.Right.CALL: "C",
+    }
+
+    return ib_insync.Contract(
         symbol=lookup.symbol,
         secType=_security_type_mapping[lookup.securityType],
         lastTradeDateOrContractMonth=lookup.lastTradeDateOrContractMonth,
