@@ -1,8 +1,6 @@
 syntax = "proto3";
 package blotter;
 
-import "google/protobuf/empty.proto";
-
 message ContractSpecifier {
     string symbol = 1;
 
@@ -107,6 +105,10 @@ message LoadHistoricalDataRequest {
     bool regularTradingHoursOnly = 6;
 }
 
+message LoadHistoricalDataResponse {
+
+}
+
 service Blotter {
-    rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (google.protobuf.Empty) {}
+    rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (LoadHistoricalDataResponse) {}
 }
