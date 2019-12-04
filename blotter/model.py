@@ -27,7 +27,7 @@ def contract_from_specifier(specifier: Any) -> ib_insync.Contract:
     }
 
     right_mapping = {
-        _ContractSpecifier.Right.UNSET: "",
+        _ContractSpecifier.Right.UNSPECIFIED_RIGHT: "",
         _ContractSpecifier.Right.PUT: "P",
         _ContractSpecifier.Right.CALL: "C",
     }

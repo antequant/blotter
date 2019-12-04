@@ -35,19 +35,24 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 useRTH=request.regularTradingHoursOnly,
             )
 
+            if not barList:
+                raise RuntimeError(f"Could not load historical data bars")
+
             return ib_insync.util.df(barList)
 
         df = asyncio.run_coroutine_threadsafe(fetch_bars(), self._loop).result()
+        logging.debug(df)
 
         client = bigquery.Client()
-        dataset_id = "tradesponder:blotter"
+        dataset_id = "blotter"
         table_id = f"test_{request.contractSpecifier.symbol}"
 
         dataset_ref = client.dataset(dataset_id)
         table_ref = dataset_ref.table(table_id)
 
         job = client.load_table_from_dataframe(df, table_ref)
-        job.result()
+        result = job.result()
+        logging.info("BigQuery job result: {result}")
 
 
 def start(
