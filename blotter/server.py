@@ -20,7 +20,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         super().__init__()
 
     def LoadHistoricalData(self, request: Any, context: Any) -> Any:
-        logging.debug(f"LoadHistoricalData: {request}")
+        logging.info(f"LoadHistoricalData: {request}")
 
         async def fetch_bars() -> pd.DataFrame:
             con = model.contract_from_specifier(request.contractSpecifier)
@@ -41,7 +41,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             return ib_insync.util.df(barList)
 
         df = asyncio.run_coroutine_threadsafe(fetch_bars(), self._loop).result()
-        logging.debug(f"DataFrame: {df}")
+        logging.debug(f"DataFrame sample: {df.sample()}")
 
         client = bigquery.Client()
         dataset_id = "blotter"
