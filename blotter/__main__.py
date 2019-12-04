@@ -46,7 +46,12 @@ def main() -> None:
     ib = ib_insync.IB()
 
     print(f"Connecting to IB on {args.tws_host}:{args.tws_port}")
-    ib.connect(host=args.tws_host, port=args.tws_port, readonly=True)
+    ib.connect(
+        host=args.tws_host,
+        port=args.tws_port,
+        clientId=random.randint(-(2 ** 31), 2 ** 31 - 1),
+        readonly=True,
+    )
 
     port = args.port or random.randint(49152, 65535)
     s = server.start(port, ib, asyncio.get_event_loop())
