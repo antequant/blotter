@@ -33,6 +33,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 barSizeSetting=model.bar_size_str(request.barSize),
                 whatToShow=model.bar_source_str(request.barSource),
                 useRTH=request.regularTradingHoursOnly,
+                formatDate=2,  # Convert all timestamps to UTC
             )
 
             if not barList:
