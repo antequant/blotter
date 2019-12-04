@@ -50,6 +50,12 @@ parser.add_argument(
     default="MIDPOINT",
 )
 
+parser.add_argument(
+    "--currency",
+    help="The currency of the security being loaded (sometimes necessary to disambiguate contracts)",
+    default="USD",
+)
+
 subparsers = parser.add_subparsers(dest="command", help="What to do")
 
 backfill_parser = subparsers.add_parser("backfill", help="Backfill securities data")
@@ -68,7 +74,10 @@ def contract_specifier_from_args(args: Namespace) -> _ContractSpecifier:
     for key, sec_type in type_mapping.items():
         if hasattr(args, key):
             return _ContractSpecifier(
-                symbol=getattr(args, key), securityType=sec_type, exchange="SMART"
+                symbol=getattr(args, key),
+                securityType=sec_type,
+                exchange="SMART",
+                currency=args.currency,
             )
 
     raise RuntimeError(f"Security not specified")
@@ -76,7 +85,7 @@ def contract_specifier_from_args(args: Namespace) -> _ContractSpecifier:
 
 def duration_from_args(args: Namespace) -> _Duration:
     duration_mapping = {
-        "days": _Duration.DAYS,
+        "days": _Duration.TimeUnit.DAYS,
     }
 
     for key, unit in duration_mapping.items():
