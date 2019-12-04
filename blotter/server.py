@@ -50,8 +50,11 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
         dataset_ref = client.dataset(dataset_id)
         table_ref = dataset_ref.table(table_id)
+        config = bigquery.job.LoadJobConfig(
+            time_partitioning=bigquery.table.TimePartitioning(field="date")
+        )
 
-        job = client.load_table_from_dataframe(df, table_ref)
+        job = client.load_table_from_dataframe(df, table_ref, job_config=config)
         result = job.result()
         logging.info(f"BigQuery job result: {result}")
 
