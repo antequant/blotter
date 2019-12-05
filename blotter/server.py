@@ -2,7 +2,7 @@ import asyncio
 import concurrent.futures as futures
 import logging
 from datetime import datetime
-from typing import Any, Optional, cast
+from typing import Any, Dict, Optional, cast
 
 import grpc
 
@@ -13,25 +13,46 @@ import pandas as pd
 from google.cloud import bigquery
 
 
+def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
+    client = bigquery.Client()
+    dataset_id = "blotter"
+
+    dataset_ref = client.dataset(dataset_id)
+    table_ref = dataset_ref.table(table_id)
+    config = bigquery.job.LoadJobConfig(
+        time_partitioning=bigquery.table.TimePartitioning(field="date")
+    )
+
+    return client.load_table_from_dataframe(df, table_ref, job_config=config)
+
+
 class Servicer(blotter_pb2_grpc.BlotterServicer):
+    _real_time_bars: Dict[str, ib_insync.RealTimeBarList]
+
     def __init__(self, ib_client: ib_insync.IB, eventLoop: asyncio.AbstractEventLoop):
         self._ib_client = ib_client
         self._loop = eventLoop
+        self._real_time_bars = {}
         super().__init__()
+
+    async def _qualify_contract_specifier(self, specifier: Any) -> ib_insync.Contract:
+        contract = model.contract_from_specifier(specifier)
+        await self._ib_client.qualifyContractsAsync(contract)
+
+        return contract
 
     def LoadHistoricalData(self, request: Any, context: Any) -> Any:
         logging.info(f"LoadHistoricalData: {request}")
 
         async def fetch_bars() -> pd.DataFrame:
-            con = model.contract_from_specifier(request.contractSpecifier)
-            await self._ib_client.qualifyContractsAsync(con)
+            con = await self._qualify_contract_specifier(request.contractSpecifier)
 
             barList = await self._ib_client.reqHistoricalDataAsync(
                 contract=con,
                 endDateTime=datetime.utcfromtimestamp(request.endTimestampUTC),
                 durationStr=model.duration_str(request.duration),
                 barSizeSetting=model.bar_size_str(request.barSize),
-                whatToShow=model.bar_source_str(request.barSource),
+                whatToShow=model.historical_bar_source_str(request.barSource),
                 useRTH=request.regularTradingHoursOnly,
                 formatDate=2,  # Convert all timestamps to UTC
             )
@@ -44,21 +65,63 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         df = asyncio.run_coroutine_threadsafe(fetch_bars(), self._loop).result()
         logging.debug(f"DataFrame sample: {df.sample()}")
 
-        client = bigquery.Client()
-        dataset_id = "blotter"
-        table_id = f"test_{request.contractSpecifier.symbol}"
-
-        dataset_ref = client.dataset(dataset_id)
-        table_ref = dataset_ref.table(table_id)
-        config = bigquery.job.LoadJobConfig(
-            time_partitioning=bigquery.table.TimePartitioning(field="date")
-        )
-
-        job = client.load_table_from_dataframe(df, table_ref, job_config=config)
+        job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
         result = job.result()
-        logging.info(f"BigQuery job result: {result}")
+        logging.info(f"BigQuery historical data import: {result}")
 
         return blotter_pb2.LoadHistoricalDataResponse()
+
+    def StartRealTimeData(self, request: Any, context: Any) -> Any:
+        logging.info(f"StartRealTimeData: {request}")
+
+        def bars_updated(bars: ib_insync.RealTimeBarList, has_new_bar: bool) -> None:
+            logging.debug(f"Received {len(bars)} bars (has_new_bar={has_new_bar})")
+
+            if not bars or not has_new_bar:
+                return
+
+            df = ib_insync.util.df(bars)
+            logging.debug(f"DataFrame sample: {df.sample()}")
+
+            job = _upload_dataframe(f"test_{bars.contract.symbol}", df)
+            result = job.result()
+            logging.info(f"BigQuery real-time data import: {result}")
+
+        async def start_stream() -> str:
+            con = await self._qualify_contract_specifier(request.contractSpecifier)
+
+            bar_list = self._ib_client.reqRealTimeBars(
+                contract=con,
+                barSize=5,
+                whatToShow=model.real_time_bar_source_str(request.barSource),
+                useRTH=request.regularTradingHoursOnly,
+            )
+
+            req_id = str(bar_list.reqId)
+            if req_id in self._real_time_bars:
+                logging.error(
+                    f'Unexpectedly found "{req_id}" already in tracked bars: {self._real_time_bars}'
+                )
+
+            self._real_time_bars[req_id] = bar_list
+            bar_list.updateEvent += bars_updated
+
+            return req_id
+
+        req_id = asyncio.run_coroutine_threadsafe(start_stream(), self._loop).result()
+        logging.debug(f"Real-time bars request ID: {req_id}")
+
+        return blotter_pb2.StartRealTimeDataResponse(requestID=req_id)
+
+    def CancelRealTimeData(self, request: Any, context: Any) -> Any:
+        logging.info(f"CancelRealTimeData: {request}")
+
+        async def cancel_stream() -> None:
+            bar_list = self._real_time_bars.pop(request.requestID)
+            self._ib_client.cancelRealTimeBars(bar_list)
+
+        asyncio.run_coroutine_threadsafe(cancel_stream(), self._loop)
+        return blotter_pb2.CancelRealTimeDataResponse()
 
 
 def start(
