@@ -6,17 +6,20 @@ from blotter import blotter_pb2_grpc, blotter_pb2
 
 from datetime import datetime
 
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
 from typing import Any
 
 _ContractSpecifier: Any = blotter_pb2.ContractSpecifier
 _Duration: Any = blotter_pb2.Duration
 _LoadHistoricalDataRequest: Any = blotter_pb2.LoadHistoricalDataRequest
+_StartRealTimeDataRequest: Any = blotter_pb2.StartRealTimeDataRequest
+_CancelRealTimeDataRequest: Any = blotter_pb2.CancelRealTimeDataRequest
 
 parser = ArgumentParser(
     prog="blotter-client",
     description="Blotter command line client",
     epilog="For more information, or to report issues, please visit: https://github.com/jspahrsummers/blotter",
+    formatter_class=ArgumentDefaultsHelpFormatter,
 )
 
 parser.add_argument(
@@ -37,20 +40,6 @@ securities_group = parser.add_mutually_exclusive_group()
 securities_group.add_argument("--stock", help="Load data for the given stock ticker.")
 
 parser.add_argument(
-    "--bar-size",
-    help="Size of bars to fetch",
-    choices=_LoadHistoricalDataRequest.BarSize.keys(),
-    default="ONE_MINUTE",
-)
-
-parser.add_argument(
-    "--bar-source",
-    help="Which quotes or data to fetch per bar",
-    choices=_LoadHistoricalDataRequest.BarSource.keys(),
-    default="MIDPOINT",
-)
-
-parser.add_argument(
     "--currency",
     help="The currency of the security being loaded (sometimes necessary to disambiguate contracts)",
     default="USD",
@@ -60,10 +49,35 @@ subparsers = parser.add_subparsers(dest="command", help="What to do")
 
 backfill_parser = subparsers.add_parser("backfill", help="Backfill securities data")
 
+backfill_parser.add_argument(
+    "--bar-size",
+    help="Size of bars to fetch",
+    choices=_LoadHistoricalDataRequest.BarSize.keys(),
+    default="ONE_MINUTE",
+)
+
+backfill_parser.add_argument(
+    "--bar-source",
+    help="Which quotes or data to fetch per bar",
+    choices=_LoadHistoricalDataRequest.BarSource.keys(),
+    default="MIDPOINT",
+)
+
 duration_group = backfill_parser.add_mutually_exclusive_group()
 duration_group.add_argument(
     "--days", type=int, help="Number of days to backfill data for", default=10
 )
+
+start_parser = subparsers.add_parser("start", help="Start streaming securities data")
+start_parser.add_argument(
+    "--bar-source",
+    help="Which quotes or data to fetch per bar",
+    choices=_StartRealTimeDataRequest.BarSource.keys(),
+    default="MIDPOINT",
+)
+
+stop_parser = subparsers.add_parser("stop", help="Stop streaming securities data")
+stop_parser.add_argument("request_id", help="The streaming request to cancel")
 
 
 def contract_specifier_from_args(args: Namespace) -> _ContractSpecifier:
@@ -109,6 +123,25 @@ def backfill(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
     stub.LoadHistoricalData(request)
 
 
+def start_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
+    request = _StartRealTimeDataRequest(
+        contractSpecifier=contract_specifier_from_args(args),
+        barSource=_StartRealTimeDataRequest.BarSource.Value(args.bar_source),
+    )
+
+    logging.info(f"StartRealTimeData: {request}")
+    response = stub.StartRealTimeData(request)
+
+    print(f"Streaming started with request ID: {response.requestID}")
+
+
+def stop_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
+    request = _CancelRealTimeDataRequest(requestID=args.request_id)
+
+    logging.info(f"CancelRealTimeData: {request}")
+    stub.CancelRealTimeData(request)
+
+
 def main() -> None:
     args = parser.parse_args()
     if args.verbose:
@@ -129,7 +162,12 @@ def main() -> None:
     channel = grpc.insecure_channel(address)
     stub = blotter_pb2_grpc.BlotterStub(channel)
 
-    commands = {"backfill": backfill}
+    commands = {
+        "backfill": backfill,
+        "start": start_streaming,
+        "stop": stop_streaming,
+    }
+
     commands[args.command](stub, args)
 
 
