@@ -2,8 +2,6 @@ syntax = "proto3";
 package blotter;
 
 message ContractSpecifier {
-    string symbol = 1;
-
     enum SecurityType {
         STOCK = 0;
         OPTION = 1;
@@ -20,16 +18,16 @@ message ContractSpecifier {
         FUND = 12;
     }
 
-    SecurityType securityType = 2;
-    string lastTradeDateOrContractMonth = 3;
-    string strike = 4;
-
     enum Right {
         UNSPECIFIED_RIGHT = 0;
         PUT = 1;
         CALL = 2;
     }
 
+    string symbol = 1;
+    SecurityType securityType = 2;
+    string lastTradeDateOrContractMonth = 3;
+    string strike = 4;
     Right right = 5;
     string multiplier = 6;
     string exchange = 7;
@@ -105,10 +103,35 @@ message LoadHistoricalDataRequest {
     bool regularTradingHoursOnly = 6;
 }
 
-message LoadHistoricalDataResponse {
+message LoadHistoricalDataResponse {}
 
+message StartRealTimeDataRequest {
+    enum BarSource {
+        UNSPECIFIED_SOURCE = 0;
+        TRADES = 1;
+        MIDPOINT = 2;
+        BID = 3;
+        ASK = 4;
+    }
+
+    ContractSpecifier contractSpecifier = 1;
+    BarSource barSource = 2;
+    bool regularTradingHoursOnly = 3;
 }
+
+message StartRealTimeDataResponse {
+    string requestID = 1;
+}
+
+message CancelRealTimeDataRequest {
+    string requestID = 1;
+}
+
+message CancelRealTimeDataResponse {}
 
 service Blotter {
     rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (LoadHistoricalDataResponse) {}
+
+    rpc StartRealTimeData(StartRealTimeDataRequest) returns (StartRealTimeDataResponse) {}
+    rpc CancelRealTimeData(CancelRealTimeDataRequest) returns (CancelRealTimeDataResponse) {}
 }

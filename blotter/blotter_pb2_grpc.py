@@ -19,6 +19,16 @@ class BlotterStub(object):
         request_serializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.SerializeToString,
         response_deserializer=blotter_dot_blotter__pb2.LoadHistoricalDataResponse.FromString,
         )
+    self.StartRealTimeData = channel.unary_unary(
+        '/blotter.Blotter/StartRealTimeData',
+        request_serializer=blotter_dot_blotter__pb2.StartRealTimeDataRequest.SerializeToString,
+        response_deserializer=blotter_dot_blotter__pb2.StartRealTimeDataResponse.FromString,
+        )
+    self.CancelRealTimeData = channel.unary_unary(
+        '/blotter.Blotter/CancelRealTimeData',
+        request_serializer=blotter_dot_blotter__pb2.CancelRealTimeDataRequest.SerializeToString,
+        response_deserializer=blotter_dot_blotter__pb2.CancelRealTimeDataResponse.FromString,
+        )
 
 
 class BlotterServicer(object):
@@ -32,6 +42,20 @@ class BlotterServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def StartRealTimeData(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def CancelRealTimeData(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_BlotterServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -39,6 +63,16 @@ def add_BlotterServicer_to_server(servicer, server):
           servicer.LoadHistoricalData,
           request_deserializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.FromString,
           response_serializer=blotter_dot_blotter__pb2.LoadHistoricalDataResponse.SerializeToString,
+      ),
+      'StartRealTimeData': grpc.unary_unary_rpc_method_handler(
+          servicer.StartRealTimeData,
+          request_deserializer=blotter_dot_blotter__pb2.StartRealTimeDataRequest.FromString,
+          response_serializer=blotter_dot_blotter__pb2.StartRealTimeDataResponse.SerializeToString,
+      ),
+      'CancelRealTimeData': grpc.unary_unary_rpc_method_handler(
+          servicer.CancelRealTimeData,
+          request_deserializer=blotter_dot_blotter__pb2.CancelRealTimeDataRequest.FromString,
+          response_serializer=blotter_dot_blotter__pb2.CancelRealTimeDataResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
