@@ -49,7 +49,7 @@ def main() -> None:
     ib.connect(
         host=args.tws_host,
         port=args.tws_port,
-        clientId=random.randint(-(2 ** 31), 2 ** 31 - 1),
+        clientId=random.randint(1, 2 ** 31 - 1),
         readonly=True,
     )
 
