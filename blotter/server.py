@@ -80,12 +80,19 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             if not bars or not has_new_bar:
                 return
 
-            df = ib_insync.util.df(bars)
-            logging.debug(f"DataFrame sample: {df.sample()}")
+            try:
+                df = ib_insync.util.df(bars)
+                logging.debug(f"DataFrame sample: {df.sample()}")
 
-            job = _upload_dataframe(f"test_{bars.contract.symbol}", df)
-            result = job.result()
-            logging.info(f"BigQuery real-time data import: {result}")
+                job = _upload_dataframe(f"test_{bars.contract.symbol}", df)
+                result = job.result()
+                logging.info(f"BigQuery real-time data import: {result}")
+            except Exception as err:
+                logging.error(
+                    f"Cancelling real-time data due to exception thrown: {err}"
+                )
+
+                self._ib_client.cancelRealTimeBars(bars)
 
         async def start_stream() -> str:
             con = await self._qualify_contract_specifier(request.contractSpecifier)
@@ -117,8 +124,9 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logging.info(f"CancelRealTimeData: {request}")
 
         async def cancel_stream() -> None:
-            bar_list = self._real_time_bars.pop(request.requestID)
-            self._ib_client.cancelRealTimeBars(bar_list)
+            bar_list = self._real_time_bars.pop(request.requestID, None)
+            if bar_list:
+                self._ib_client.cancelRealTimeBars(bar_list)
 
         asyncio.run_coroutine_threadsafe(cancel_stream(), self._loop)
         return blotter_pb2.CancelRealTimeDataResponse()
