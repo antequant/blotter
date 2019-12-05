@@ -5,6 +5,9 @@ import ib_insync
 from typing import Any
 
 _ContractSpecifier: Any = blotter_pb2.ContractSpecifier
+_Duration: Any = blotter_pb2.Duration
+_LoadHistoricalDataRequest: Any = blotter_pb2.LoadHistoricalDataRequest
+_StartRealTimeDataRequest: Any = blotter_pb2.StartRealTimeDataRequest
 
 
 def contract_from_specifier(specifier: Any) -> ib_insync.Contract:
@@ -48,9 +51,6 @@ def contract_from_specifier(specifier: Any) -> ib_insync.Contract:
     )
 
 
-_Duration: Any = blotter_pb2.Duration
-
-
 def duration_str(duration: Any) -> str:
     time_unit_mapping = {
         _Duration.TimeUnit.SECONDS: "S",
@@ -61,9 +61,6 @@ def duration_str(duration: Any) -> str:
     }
 
     return f"{duration.count} {time_unit_mapping[duration.unit]}"
-
-
-_LoadHistoricalDataRequest: Any = blotter_pb2.LoadHistoricalDataRequest
 
 
 def bar_size_str(bar_size: Any) -> str:
@@ -94,6 +91,10 @@ def bar_size_str(bar_size: Any) -> str:
     return bar_size_mapping[bar_size]
 
 
-def bar_source_str(bar_source: Any) -> str:
+def historical_bar_source_str(bar_source: Any) -> str:
     return str(_LoadHistoricalDataRequest.BarSource.Name(bar_source))
+
+
+def real_time_bar_source_str(bar_source: Any) -> str:
+    return str(_StartRealTimeDataRequest.BarSource.Name(bar_source))
 
