@@ -64,6 +64,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             return ib_insync.util.df(barList)
 
         df = asyncio.run_coroutine_threadsafe(fetch_bars(), self._loop).result()
+        df.rename(columns={"time": "date"})
         logging.debug(f"DataFrame sample: {df.sample()}")
 
         job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
