@@ -2,7 +2,7 @@ import asyncio
 import concurrent.futures as futures
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional, cast
+from typing import Dict, Optional, cast
 
 import grpc
 
@@ -36,13 +36,19 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         self._real_time_bars = {}
         super().__init__()
 
-    async def _qualify_contract_specifier(self, specifier: Any) -> ib_insync.Contract:
+    async def _qualify_contract_specifier(
+        self, specifier: blotter_pb2.ContractSpecifier
+    ) -> ib_insync.Contract:
         contract = model.contract_from_specifier(specifier)
         await self._ib_client.qualifyContractsAsync(contract)
 
         return contract
 
-    def LoadHistoricalData(self, request: Any, context: Any) -> Any:
+    def LoadHistoricalData(
+        self,
+        request: blotter_pb2.LoadHistoricalDataRequest,
+        context: grpc.ServicerContext,
+    ) -> blotter_pb2.LoadHistoricalDataResponse:
         logging.info(f"LoadHistoricalData: {request}")
 
         async def fetch_bars() -> pd.DataFrame:
@@ -72,7 +78,11 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
         return blotter_pb2.LoadHistoricalDataResponse()
 
-    def StartRealTimeData(self, request: Any, context: Any) -> Any:
+    def StartRealTimeData(
+        self,
+        request: blotter_pb2.StartRealTimeDataRequest,
+        context: grpc.ServicerContext,
+    ) -> blotter_pb2.StartRealTimeDataResponse:
         logging.info(f"StartRealTimeData: {request}")
 
         def bars_updated(bars: ib_insync.RealTimeBarList, has_new_bar: bool) -> None:
@@ -122,7 +132,11 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
         return blotter_pb2.StartRealTimeDataResponse(requestID=req_id)
 
-    def CancelRealTimeData(self, request: Any, context: Any) -> Any:
+    def CancelRealTimeData(
+        self,
+        request: blotter_pb2.CancelRealTimeDataRequest,
+        context: grpc.ServicerContext,
+    ) -> blotter_pb2.CancelRealTimeDataResponse:
         logging.info(f"CancelRealTimeData: {request}")
 
         async def cancel_stream() -> None:

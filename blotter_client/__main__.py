@@ -7,13 +7,6 @@ from blotter import blotter_pb2_grpc, blotter_pb2
 from datetime import datetime
 
 from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
-from typing import Any
-
-_ContractSpecifier: Any = blotter_pb2.ContractSpecifier
-_Duration: Any = blotter_pb2.Duration
-_LoadHistoricalDataRequest: Any = blotter_pb2.LoadHistoricalDataRequest
-_StartRealTimeDataRequest: Any = blotter_pb2.StartRealTimeDataRequest
-_CancelRealTimeDataRequest: Any = blotter_pb2.CancelRealTimeDataRequest
 
 parser = ArgumentParser(
     prog="blotter-client",
@@ -52,14 +45,14 @@ backfill_parser = subparsers.add_parser("backfill", help="Backfill securities da
 backfill_parser.add_argument(
     "--bar-size",
     help="Size of bars to fetch",
-    choices=_LoadHistoricalDataRequest.BarSize.keys(),
+    choices=blotter_pb2.LoadHistoricalDataRequest.BarSize.keys(),
     default="ONE_MINUTE",
 )
 
 backfill_parser.add_argument(
     "--bar-source",
     help="Which quotes or data to fetch per bar",
-    choices=_LoadHistoricalDataRequest.BarSource.keys(),
+    choices=blotter_pb2.LoadHistoricalDataRequest.BarSource.keys(),
     default="MIDPOINT",
 )
 
@@ -72,7 +65,7 @@ start_parser = subparsers.add_parser("start", help="Start streaming securities d
 start_parser.add_argument(
     "--bar-source",
     help="Which quotes or data to fetch per bar",
-    choices=_StartRealTimeDataRequest.BarSource.keys(),
+    choices=blotter_pb2.StartRealTimeDataRequest.BarSource.keys(),
     default="MIDPOINT",
 )
 
@@ -80,14 +73,14 @@ stop_parser = subparsers.add_parser("stop", help="Stop streaming securities data
 stop_parser.add_argument("request_id", help="The streaming request to cancel")
 
 
-def contract_specifier_from_args(args: Namespace) -> _ContractSpecifier:
+def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifier:
     type_mapping = {
-        "stock": _ContractSpecifier.SecurityType.STOCK,
+        "stock": blotter_pb2.ContractSpecifier.SecurityType.STOCK,
     }
 
     for key, sec_type in type_mapping.items():
         if hasattr(args, key):
-            return _ContractSpecifier(
+            return blotter_pb2.ContractSpecifier(
                 symbol=getattr(args, key),
                 securityType=sec_type,
                 exchange="SMART",
@@ -97,26 +90,28 @@ def contract_specifier_from_args(args: Namespace) -> _ContractSpecifier:
     raise RuntimeError(f"Security not specified")
 
 
-def duration_from_args(args: Namespace) -> _Duration:
+def duration_from_args(args: Namespace) -> blotter_pb2.Duration:
     duration_mapping = {
-        "days": _Duration.TimeUnit.DAYS,
+        "days": blotter_pb2.Duration.TimeUnit.DAYS,
     }
 
     for key, unit in duration_mapping.items():
         if hasattr(args, key):
-            return _Duration(count=getattr(args, key), unit=unit)
+            return blotter_pb2.Duration(count=getattr(args, key), unit=unit)
 
     raise RuntimeError(f"Duration not specified")
 
 
 def backfill(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
-    request = _LoadHistoricalDataRequest(
+    request = blotter_pb2.LoadHistoricalDataRequest(
         contractSpecifier=contract_specifier_from_args(args),
         # TODO: Make this a command-line arg too
         endTimestampUTC=int(datetime.utcnow().timestamp()),
         duration=duration_from_args(args),
-        barSize=_LoadHistoricalDataRequest.BarSize.Value(args.bar_size),
-        barSource=_LoadHistoricalDataRequest.BarSource.Value(args.bar_source),
+        barSize=blotter_pb2.LoadHistoricalDataRequest.BarSize.Value(args.bar_size),
+        barSource=blotter_pb2.LoadHistoricalDataRequest.BarSource.Value(
+            args.bar_source
+        ),
     )
 
     logging.info(f"LoadHistoricalData: {request}")
@@ -124,9 +119,9 @@ def backfill(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
 
 
 def start_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
-    request = _StartRealTimeDataRequest(
+    request = blotter_pb2.StartRealTimeDataRequest(
         contractSpecifier=contract_specifier_from_args(args),
-        barSource=_StartRealTimeDataRequest.BarSource.Value(args.bar_source),
+        barSource=blotter_pb2.StartRealTimeDataRequest.BarSource.Value(args.bar_source),
     )
 
     logging.info(f"StartRealTimeData: {request}")
@@ -136,7 +131,7 @@ def start_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None
 
 
 def stop_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
-    request = _CancelRealTimeDataRequest(requestID=args.request_id)
+    request = blotter_pb2.CancelRealTimeDataRequest(requestID=args.request_id)
 
     logging.info(f"CancelRealTimeData: {request}")
     stub.CancelRealTimeData(request)
