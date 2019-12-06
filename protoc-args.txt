@@ -1,4 +1,6 @@
 -I.
 --python_out=.
 --grpc_python_out=.
+--plugin=protoc-gen-mypy=venv\Scripts\protoc_gen_mypy.bat
+--mypy_out=.
 blotter\blotter.proto
