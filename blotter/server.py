@@ -101,7 +101,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logging.debug(df)
 
         job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
-        logging.info(f"BigQuery backfill job launched: {job}")
+        logging.info(f"BigQuery backfill job launched: {job.job_id}")
 
         return blotter_pb2.LoadHistoricalDataResponse()
 
@@ -124,7 +124,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 logging.debug(df)
 
                 job = _upload_dataframe(f"test_{bars.contract.symbol}", df)
-                logging.info(f"BigQuery data import job launched: {job}")
+                logging.info(f"BigQuery data import job launched: {job.job_id}")
             except Exception:
                 logging.exception(f"Cancelling real-time data due to exception")
                 error_reporting.Client().report_exception()
