@@ -115,7 +115,9 @@ def backfill(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
     )
 
     logging.info(f"LoadHistoricalData: {request}")
-    stub.LoadHistoricalData(request)
+
+    response = stub.LoadHistoricalData(request)
+    print(f"Backfill started with job ID: {response.backfillJobID}")
 
 
 def start_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
@@ -125,8 +127,8 @@ def start_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None
     )
 
     logging.info(f"StartRealTimeData: {request}")
-    response = stub.StartRealTimeData(request)
 
+    response = stub.StartRealTimeData(request)
     print(f"Streaming started with request ID: {response.requestID}")
 
 

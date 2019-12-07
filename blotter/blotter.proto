@@ -103,7 +103,9 @@ message LoadHistoricalDataRequest {
     bool regularTradingHoursOnly = 6;
 }
 
-message LoadHistoricalDataResponse {}
+message LoadHistoricalDataResponse {
+    string backfillJobID = 1;
+}
 
 message StartRealTimeDataRequest {
     enum BarSource {

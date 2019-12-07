@@ -103,7 +103,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
         logging.info(f"BigQuery backfill job launched: {job.job_id}")
 
-        return blotter_pb2.LoadHistoricalDataResponse()
+        return blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
 
     def StartRealTimeData(
         self,
