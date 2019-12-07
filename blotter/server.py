@@ -24,7 +24,17 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
         schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
     )
 
-    return client.load_table_from_dataframe(df, table_ref, job_config=config)
+    job = client.load_table_from_dataframe(df, table_ref, job_config=config)
+
+    def _report_job_exception(job: concurrent.futures.Future[_T]) -> None:
+        try:
+            job.result()
+        except Exception:
+            logging.exception(f"Exception thrown from BigQuery job: {job}")
+            error_reporting.Client().report_exception()
+
+    job.add_done_callback(_report_job_exception)
+    return job
 
 
 _T = TypeVar("_T")
@@ -91,8 +101,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logging.debug(df)
 
         job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
-        result = job.result()
-        logging.info(f"BigQuery historical data import: {result}")
+        logging.info(f"BigQuery backfill job launched: {job}")
 
         return blotter_pb2.LoadHistoricalDataResponse()
 
@@ -115,8 +124,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 logging.debug(df)
 
                 job = _upload_dataframe(f"test_{bars.contract.symbol}", df)
-                result = job.result()
-                logging.info(f"BigQuery real-time data import: {result}")
+                logging.info(f"BigQuery data import job launched: {job}")
             except Exception:
                 logging.exception(f"Cancelling real-time data due to exception")
                 error_reporting.Client().report_exception()
