@@ -50,7 +50,17 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     def _run_in_ib_thread(
         self, awaitable: Awaitable[_T]
     ) -> concurrent.futures.Future[_T]:
-        return asyncio.run_coroutine_threadsafe(awaitable, self._loop)
+        fut = asyncio.run_coroutine_threadsafe(awaitable, self._loop)
+
+        def _report_future_exception(future: concurrent.futures.Future[_T]) -> None:
+            try:
+                future.result()
+            except Exception:
+                logging.exception(f"Exception thrown in IB thread")
+                error_reporting.Client().report_exception()
+
+        fut.add_done_callback(_report_future_exception)
+        return fut
 
     def LoadHistoricalData(
         self,
