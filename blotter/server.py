@@ -2,15 +2,15 @@ import asyncio
 import concurrent.futures
 import logging
 from datetime import datetime
-from typing import Awaitable, Dict, Optional, TypeVar
+from typing import Awaitable, Callable, Dict, Optional, TypeVar
 
 import grpc
-
-from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 import ib_insync
 import pandas as pd
-
 from google.cloud import bigquery, error_reporting
+
+from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
+from blotter.ib_helpers import IBThread
 
 
 def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
@@ -38,30 +38,30 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     return job
 
 
+async def _qualify_contract_specifier(
+    ib_client: ib_insync.IB, specifier: blotter_pb2.ContractSpecifier
+) -> ib_insync.Contract:
+    contract = request_helpers.contract_from_specifier(specifier)
+    await ib_client.qualifyContractsAsync(contract)
+
+    return contract
+
+
 _T = TypeVar("_T")
 
 
 class Servicer(blotter_pb2_grpc.BlotterServicer):
     _real_time_bars: Dict[str, ib_insync.RealTimeBarList]
 
-    def __init__(self, ib_client: ib_insync.IB, eventLoop: asyncio.AbstractEventLoop):
-        self._ib_client = ib_client
-        self._loop = eventLoop
+    def __init__(self, ib_thread: IBThread):
+        self._ib_thread = ib_thread
         self._real_time_bars = {}
         super().__init__()
 
-    async def _qualify_contract_specifier(
-        self, specifier: blotter_pb2.ContractSpecifier
-    ) -> ib_insync.Contract:
-        contract = request_helpers.contract_from_specifier(specifier)
-        await self._ib_client.qualifyContractsAsync(contract)
-
-        return contract
-
     def _run_in_ib_thread(
-        self, awaitable: Awaitable[_T]
+        self, fn: Callable[[ib_insync.IB], Awaitable[_T]]
     ) -> "concurrent.futures.Future[_T]":
-        fut = asyncio.run_coroutine_threadsafe(awaitable, self._loop)
+        fut = self._ib_thread.schedule(fn)
 
         def _report_future_exception(future: "concurrent.futures.Future[_T]") -> None:
             try:
@@ -80,10 +80,12 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.LoadHistoricalDataResponse:
         logging.info(f"LoadHistoricalData: {request}")
 
-        async def fetch_bars() -> pd.DataFrame:
-            con = await self._qualify_contract_specifier(request.contractSpecifier)
+        async def fetch_bars(ib_client: ib_insync.IB) -> pd.DataFrame:
+            con = await _qualify_contract_specifier(
+                ib_client, request.contractSpecifier
+            )
 
-            barList = await self._ib_client.reqHistoricalDataAsync(
+            barList = await ib_client.reqHistoricalDataAsync(
                 contract=con,
                 endDateTime=datetime.utcfromtimestamp(request.endTimestampUTC),
                 durationStr=request_helpers.duration_str(request.duration),
@@ -98,7 +100,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
             return ib_insync.util.df(barList)
 
-        df = self._run_in_ib_thread(fetch_bars()).result()
+        df = self._run_in_ib_thread(fetch_bars).result()
         logging.debug(df)
 
         job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
@@ -130,12 +132,14 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 logging.exception(f"Cancelling real-time data due to exception")
                 error_reporting.Client().report_exception()
 
-                self._ib_client.cancelRealTimeBars(bars)
+                self._ib_thread.client_unsafe.cancelRealTimeBars(bars)
 
-        async def start_stream() -> str:
-            con = await self._qualify_contract_specifier(request.contractSpecifier)
+        async def start_stream(ib_client: ib_insync.IB) -> str:
+            con = await _qualify_contract_specifier(
+                ib_client, request.contractSpecifier
+            )
 
-            bar_list = self._ib_client.reqRealTimeBars(
+            bar_list = ib_client.reqRealTimeBars(
                 contract=con,
                 barSize=5,
                 whatToShow=request_helpers.real_time_bar_source_str(request.barSource),
@@ -153,7 +157,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
             return req_id
 
-        req_id = self._run_in_ib_thread(start_stream()).result()
+        req_id = self._run_in_ib_thread(start_stream).result()
         logging.debug(f"Real-time bars request ID: {req_id}")
 
         return blotter_pb2.StartRealTimeDataResponse(requestID=req_id)
@@ -165,32 +169,28 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.CancelRealTimeDataResponse:
         logging.info(f"CancelRealTimeData: {request}")
 
-        async def cancel_stream() -> None:
+        async def cancel_stream(ib_client: ib_insync.IB) -> None:
             bar_list = self._real_time_bars.pop(request.requestID, None)
             if bar_list:
-                self._ib_client.cancelRealTimeBars(bar_list)
+                ib_client.cancelRealTimeBars(bar_list)
                 logging.info(
                     f"Cancelled real time bars for contract {bar_list.contract}"
                 )
 
-        self._run_in_ib_thread(cancel_stream())
+        self._run_in_ib_thread(cancel_stream)
         return blotter_pb2.CancelRealTimeDataResponse()
 
 
 def start(
     port: int,
-    ib_client: ib_insync.IB,
-    eventLoop: Optional[asyncio.AbstractEventLoop] = None,
+    ib_thread: IBThread,
     executor: Optional[concurrent.futures.ThreadPoolExecutor] = None,
 ) -> grpc.Server:
-    if eventLoop is None:
-        eventLoop = asyncio.get_running_loop()
-
     if executor is None:
         executor = concurrent.futures.ThreadPoolExecutor()
 
     s = grpc.server(executor)
-    blotter_pb2_grpc.add_BlotterServicer_to_server(Servicer(ib_client, eventLoop), s)
+    blotter_pb2_grpc.add_BlotterServicer_to_server(Servicer(ib_thread), s)
     s.add_insecure_port(f"[::]:{port}")
     s.start()
 
