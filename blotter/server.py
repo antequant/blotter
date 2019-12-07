@@ -1,8 +1,8 @@
 import asyncio
-import concurrent.futures as futures
+import concurrent.futures
 import logging
 from datetime import datetime
-from typing import Dict, Optional, cast
+from typing import Awaitable, Dict, Optional, TypeVar
 
 import grpc
 
@@ -27,6 +27,9 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     return client.load_table_from_dataframe(df, table_ref, job_config=config)
 
 
+_T = TypeVar("_T")
+
+
 class Servicer(blotter_pb2_grpc.BlotterServicer):
     _real_time_bars: Dict[str, ib_insync.RealTimeBarList]
 
@@ -43,6 +46,11 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         await self._ib_client.qualifyContractsAsync(contract)
 
         return contract
+
+    def _run_in_ib_thread(
+        self, awaitable: Awaitable[_T]
+    ) -> concurrent.futures.Future[_T]:
+        return asyncio.run_coroutine_threadsafe(awaitable, self._loop)
 
     def LoadHistoricalData(
         self,
@@ -69,7 +77,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
             return ib_insync.util.df(barList)
 
-        df = asyncio.run_coroutine_threadsafe(fetch_bars(), self._loop).result()
+        df = self._run_in_ib_thread(fetch_bars()).result()
         logging.debug(df)
 
         job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
@@ -126,7 +134,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
             return req_id
 
-        req_id = asyncio.run_coroutine_threadsafe(start_stream(), self._loop).result()
+        req_id = self._run_in_ib_thread(start_stream()).result()
         logging.debug(f"Real-time bars request ID: {req_id}")
 
         return blotter_pb2.StartRealTimeDataResponse(requestID=req_id)
@@ -143,7 +151,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             if bar_list:
                 self._ib_client.cancelRealTimeBars(bar_list)
 
-        asyncio.run_coroutine_threadsafe(cancel_stream(), self._loop)
+        self._run_in_ib_thread(cancel_stream())
         return blotter_pb2.CancelRealTimeDataResponse()
 
 
@@ -151,13 +159,13 @@ def start(
     port: int,
     ib_client: ib_insync.IB,
     eventLoop: Optional[asyncio.AbstractEventLoop] = None,
-    executor: Optional[futures.ThreadPoolExecutor] = None,
+    executor: Optional[concurrent.futures.ThreadPoolExecutor] = None,
 ) -> grpc.Server:
     if eventLoop is None:
         eventLoop = asyncio.get_running_loop()
 
     if executor is None:
-        executor = futures.ThreadPoolExecutor()
+        executor = concurrent.futures.ThreadPoolExecutor()
 
     s = grpc.server(executor)
     blotter_pb2_grpc.add_BlotterServicer_to_server(Servicer(ib_client, eventLoop), s)
