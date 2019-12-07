@@ -5,6 +5,7 @@ import signal
 from argparse import ArgumentParser
 
 import ib_insync
+import google.cloud.logging
 
 from blotter import server
 
@@ -40,6 +41,11 @@ parser.add_argument(
 
 def main() -> None:
     args = parser.parse_args()
+
+    google.cloud.logging.Client().setup_logging(
+        log_level=logging.DEBUG if args.verbose >= 2 else logging.INFO
+    )
+
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG if args.verbose >= 2 else logging.INFO)
 
