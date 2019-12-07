@@ -26,11 +26,12 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
 
     job = client.load_table_from_dataframe(df, table_ref, job_config=config)
 
-    def _report_job_exception(job: "concurrent.futures.Future[_T]") -> None:
+    def _report_job_exception(job: bigquery.job.LoadJob) -> None:
         try:
-            job.result()
+            result = job.result()
+            logging.info(f"BigQuery job {job.job_id} completed with result: {result}")
         except Exception:
-            logging.exception(f"Exception thrown from BigQuery job: {job}")
+            logging.exception(f"Exception thrown from BigQuery job {job.job_id}")
             error_reporting.Client().report_exception()
 
     job.add_done_callback(_report_job_exception)
@@ -168,6 +169,9 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             bar_list = self._real_time_bars.pop(request.requestID, None)
             if bar_list:
                 self._ib_client.cancelRealTimeBars(bar_list)
+                logging.info(
+                    f"Cancelled real time bars for contract {bar_list.contract}"
+                )
 
         self._run_in_ib_thread(cancel_stream())
         return blotter_pb2.CancelRealTimeDataResponse()
