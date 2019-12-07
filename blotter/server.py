@@ -10,7 +10,7 @@ from blotter import blotter_pb2, blotter_pb2_grpc, model
 import ib_insync
 import pandas as pd
 
-from google.cloud import bigquery
+from google.cloud import bigquery, error_reporting
 
 
 def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
@@ -99,10 +99,9 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 job = _upload_dataframe(f"test_{bars.contract.symbol}", df)
                 result = job.result()
                 logging.info(f"BigQuery real-time data import: {result}")
-            except Exception as err:
-                logging.error(
-                    f"Cancelling real-time data due to exception thrown: {err}"
-                )
+            except Exception:
+                logging.exception(f"Cancelling real-time data due to exception")
+                error_reporting.Client().report_exception()
 
                 self._ib_client.cancelRealTimeBars(bars)
 
