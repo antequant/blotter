@@ -23,7 +23,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
-    "-p", "--port", help="The port to listen for incoming connections on."
+    "-p",
+    "--port",
+    help="The port to listen for incoming connections on.",
+    default=50051,
 )
 
 parser.add_argument(
