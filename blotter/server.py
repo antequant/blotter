@@ -26,7 +26,7 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
 
     job = client.load_table_from_dataframe(df, table_ref, job_config=config)
 
-    def _report_job_exception(job: concurrent.futures.Future[_T]) -> None:
+    def _report_job_exception(job: "concurrent.futures.Future[_T]") -> None:
         try:
             job.result()
         except Exception:
@@ -59,10 +59,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
     def _run_in_ib_thread(
         self, awaitable: Awaitable[_T]
-    ) -> 'concurrent.futures.Future[_T]':
+    ) -> "concurrent.futures.Future[_T]":
         fut = asyncio.run_coroutine_threadsafe(awaitable, self._loop)
 
-        def _report_future_exception(future: concurrent.futures.Future[_T]) -> None:
+        def _report_future_exception(future: "concurrent.futures.Future[_T]") -> None:
             try:
                 future.result()
             except Exception:
