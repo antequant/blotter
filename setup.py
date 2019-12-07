@@ -32,6 +32,7 @@ setup(
         "grpcio ~= 1.25",
         "ib-insync ~= 0.9.58",
         "google-cloud-bigquery ~= 1.22",
+        "google-cloud-logging ~= 1.14",
         "pandas ~= 0.25.3",
         "pyarrow ~= 0.15.1",
     ],
