@@ -49,7 +49,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
     def _run_in_ib_thread(
         self, awaitable: Awaitable[_T]
-    ) -> concurrent.futures.Future[_T]:
+    ) -> 'concurrent.futures.Future[_T]':
         fut = asyncio.run_coroutine_threadsafe(awaitable, self._loop)
 
         def _report_future_exception(future: concurrent.futures.Future[_T]) -> None:
