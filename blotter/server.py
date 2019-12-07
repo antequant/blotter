@@ -6,7 +6,7 @@ from typing import Awaitable, Dict, Optional, TypeVar
 
 import grpc
 
-from blotter import blotter_pb2, blotter_pb2_grpc, model
+from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 import ib_insync
 import pandas as pd
 
@@ -53,7 +53,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     async def _qualify_contract_specifier(
         self, specifier: blotter_pb2.ContractSpecifier
     ) -> ib_insync.Contract:
-        contract = model.contract_from_specifier(specifier)
+        contract = request_helpers.contract_from_specifier(specifier)
         await self._ib_client.qualifyContractsAsync(contract)
 
         return contract
@@ -86,9 +86,9 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             barList = await self._ib_client.reqHistoricalDataAsync(
                 contract=con,
                 endDateTime=datetime.utcfromtimestamp(request.endTimestampUTC),
-                durationStr=model.duration_str(request.duration),
-                barSizeSetting=model.bar_size_str(request.barSize),
-                whatToShow=model.historical_bar_source_str(request.barSource),
+                durationStr=request_helpers.duration_str(request.duration),
+                barSizeSetting=request_helpers.bar_size_str(request.barSize),
+                whatToShow=request_helpers.historical_bar_source_str(request.barSource),
                 useRTH=request.regularTradingHoursOnly,
                 formatDate=2,  # Convert all timestamps to UTC
             )
@@ -138,7 +138,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             bar_list = self._ib_client.reqRealTimeBars(
                 contract=con,
                 barSize=5,
-                whatToShow=model.real_time_bar_source_str(request.barSource),
+                whatToShow=request_helpers.real_time_bar_source_str(request.barSource),
                 useRTH=request.regularTradingHoursOnly,
             )
 
