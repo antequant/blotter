@@ -2,6 +2,7 @@ import asyncio
 import concurrent.futures
 import logging
 from datetime import datetime
+from enum import Enum, unique
 from typing import Awaitable, Callable, Dict, Optional, TypeVar
 
 import grpc
@@ -12,6 +13,18 @@ from blotter.ib_helpers import IBThread
 from google.cloud import bigquery, error_reporting
 
 
+@unique
+class _TableColumn(Enum):
+    TIMESTAMP = "timestamp"
+    OPEN = "open"
+    HIGH = "high"
+    LOW = "low"
+    CLOSE = "close"
+    VOLUME = "volume"
+    AVERAGE_PRICE = "average"
+    BAR_COUNT = "bar_count"
+
+
 def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     client = bigquery.Client()
     dataset_id = "blotter"
@@ -19,7 +32,7 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     dataset_ref = client.dataset(dataset_id)
     table_ref = dataset_ref.table(table_id)
     config = bigquery.job.LoadJobConfig(
-        time_partitioning=bigquery.table.TimePartitioning(field="date"),
+        time_partitioning=bigquery.table.TimePartitioning(field=_TableColumn.TIMESTAMP),
         schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
     )
 
@@ -102,8 +115,22 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 raise RuntimeError(f"Could not load historical data bars")
 
             df = ib_insync.util.df(barList)
-            logging.debug(df)
 
+            # See fields on BarData.
+            df = pd.DataFrame(
+                data={
+                    _TableColumn.TIMESTAMP: df["date"],
+                    _TableColumn.OPEN: df["open"],
+                    _TableColumn.HIGH: df["high"],
+                    _TableColumn.LOW: df["low"],
+                    _TableColumn.CLOSE: df["close"],
+                    _TableColumn.VOLUME: df["volume"],
+                    _TableColumn.AVERAGE_PRICE: df["average"],
+                    _TableColumn.BAR_COUNT: df["barCount"],
+                }
+            )
+
+            logging.debug(df)
             return _upload_dataframe(_table_name_for_contract(con), df)
 
         job = self._run_in_ib_thread(fetch_bars).result()
@@ -126,9 +153,22 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
             try:
                 df = ib_insync.util.df(bars)
-                df = df.rename(columns={"time": "date"})
-                logging.debug(df)
 
+                # See fields on RealTimeBar.
+                df = pd.DataFrame(
+                    data={
+                        _TableColumn.TIMESTAMP: df["time"],
+                        _TableColumn.OPEN: df["open_"],
+                        _TableColumn.HIGH: df["high"],
+                        _TableColumn.LOW: df["low"],
+                        _TableColumn.CLOSE: df["close"],
+                        _TableColumn.VOLUME: df["volume"],
+                        _TableColumn.AVERAGE_PRICE: df["wap"],
+                        _TableColumn.BAR_COUNT: df["count"],
+                    }
+                )
+
+                logging.debug(df)
                 job = _upload_dataframe(_table_name_for_contract(bars.contract), df)
 
                 logging.info(f"BigQuery data import job launched: {job.job_id}")
