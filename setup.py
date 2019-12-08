@@ -14,7 +14,10 @@ setup(
     license="MIT",
     url="https://github.com/jspahrsummers/blotter",
     packages=find_packages(),
-    package_data={"blotter": ["blotter.proto", "py.typed"]},
+    package_data={
+        "blotter": ["blotter.proto", "py.typed"],
+        "blotter_client": ["py.typed"],
+    },
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Environment :: Console",
@@ -38,5 +41,10 @@ setup(
         "pyarrow ~= 0.15.1",
     ],
     keywords="trading investing finance ib ibkr tws",
-    entry_points={"console_scripts": ["blotter = blotter.__main__:main"]},
+    entry_points={
+        "console_scripts": [
+            "blotter = blotter.__main__:main",
+            "blotter-client = blotter_client.__main__:main",
+        ]
+    },
 )
