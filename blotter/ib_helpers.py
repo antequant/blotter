@@ -55,7 +55,3 @@ class IBThread:
             return await fn(self._client)
 
         return asyncio.run_coroutine_threadsafe(invoke(), self._loop)
-
-    @property
-    def client_unsafe(self) -> IB:
-        return self._client
