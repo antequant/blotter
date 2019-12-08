@@ -77,9 +77,26 @@ backfill_parser.add_argument(
     default="TRADES",
 )
 
-duration_group = backfill_parser.add_mutually_exclusive_group()
+duration_group = backfill_parser.add_mutually_exclusive_group(required=True)
+
 duration_group.add_argument(
-    "--days", type=int, help="Number of days to backfill data for", default=10
+    "--seconds", type=int, help="Number of seconds to backfill data for"
+)
+
+duration_group.add_argument(
+    "--days", type=int, help="Number of days to backfill data for"
+)
+
+duration_group.add_argument(
+    "--weeks", type=int, help="Number of weeks to backfill data for",
+)
+
+duration_group.add_argument(
+    "--months", type=int, help="Number of months to backfill data for",
+)
+
+duration_group.add_argument(
+    "--years", type=int, help="Number of years to backfill data for",
 )
 
 start_parser = subparsers.add_parser("start", help="Start streaming securities data")
@@ -120,11 +137,15 @@ def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifi
 
 def duration_from_args(args: Namespace) -> blotter_pb2.Duration:
     duration_mapping = {
+        "seconds": blotter_pb2.Duration.TimeUnit.SECONDS,
         "days": blotter_pb2.Duration.TimeUnit.DAYS,
+        "weeks": blotter_pb2.Duration.TimeUnit.WEEKS,
+        "months": blotter_pb2.Duration.TimeUnit.MONTHS,
+        "years": blotter_pb2.Duration.TimeUnit.YEARS,
     }
 
     for key, unit in duration_mapping.items():
-        if hasattr(args, key):
+        if getattr(args, key):
             return blotter_pb2.Duration(count=getattr(args, key), unit=unit)
 
     raise RuntimeError(f"Duration not specified")
