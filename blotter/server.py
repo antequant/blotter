@@ -146,3 +146,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
         self._run_in_ib_thread(_cancel_stream)
         return blotter_pb2.CancelRealTimeDataResponse()
+
+    def HealthCheck(
+        self, request: blotter_pb2.HealthCheckRequest, context: grpc.ServicerContext,
+    ) -> blotter_pb2.HealthCheckResponse:
+        logging.info(f"HealthCheck: {request}")
+        return blotter_pb2.HealthCheckResponse()
+

@@ -61,6 +61,8 @@ parser.add_argument(
 
 subparsers = parser.add_subparsers(dest="command", help="What to do")
 
+ping_parser = subparsers.add_parser("ping", help="Check that the server is online")
+
 backfill_parser = subparsers.add_parser("backfill", help="Backfill securities data")
 
 backfill_parser.add_argument(
@@ -188,6 +190,14 @@ def stop_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
     stub.CancelRealTimeData(request)
 
 
+def ping(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
+    request = blotter_pb2.HealthCheckRequest()
+    logging.info(f"HealthCheck: {request}")
+
+    stub.HealthCheck(request)
+    print("Ping!")
+
+
 def main() -> None:
     args = parser.parse_args()
     if args.verbose:
@@ -212,6 +222,7 @@ def main() -> None:
         "backfill": backfill,
         "start": start_streaming,
         "stop": stop_streaming,
+        "ping": ping,
     }
 
     commands[args.command](stub, args)

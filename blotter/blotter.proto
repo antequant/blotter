@@ -197,10 +197,21 @@ message CancelRealTimeDataRequest {
 // See the Blotter service below.
 message CancelRealTimeDataResponse {}
 
+// See the Blotter service below.
+message HealthCheckRequest {}
+
+// See the Blotter service below.
+message HealthCheckResponse {}
+
 /*
  * RPC interface to the Blotter microservice, for sending market data to BigQuery.
  */
 service Blotter {
+    /*
+     * Pings the server to check that it is online and ready to accept requests.
+     */
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
+
     /*
      * Loads historical bars for a contract, then enqueues one or more jobs to import them into the appropriate BigQuery table.
      */

@@ -15,6 +15,11 @@ class BlotterStub(object):
     Args:
       channel: A grpc.Channel.
     """
+    self.HealthCheck = channel.unary_unary(
+        '/blotter.Blotter/HealthCheck',
+        request_serializer=blotter_dot_blotter__pb2.HealthCheckRequest.SerializeToString,
+        response_deserializer=blotter_dot_blotter__pb2.HealthCheckResponse.FromString,
+        )
     self.LoadHistoricalData = channel.unary_stream(
         '/blotter.Blotter/LoadHistoricalData',
         request_serializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.SerializeToString,
@@ -36,6 +41,14 @@ class BlotterServicer(object):
   """
   RPC interface to the Blotter microservice, for sending market data to BigQuery.
   """
+
+  def HealthCheck(self, request, context):
+    """
+    Pings the server to check that it is online and ready to accept requests.
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
 
   def LoadHistoricalData(self, request, context):
     """
@@ -66,6 +79,11 @@ class BlotterServicer(object):
 
 def add_BlotterServicer_to_server(servicer, server):
   rpc_method_handlers = {
+      'HealthCheck': grpc.unary_unary_rpc_method_handler(
+          servicer.HealthCheck,
+          request_deserializer=blotter_dot_blotter__pb2.HealthCheckRequest.FromString,
+          response_serializer=blotter_dot_blotter__pb2.HealthCheckResponse.SerializeToString,
+      ),
       'LoadHistoricalData': grpc.unary_stream_rpc_method_handler(
           servicer.LoadHistoricalData,
           request_deserializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.FromString,
