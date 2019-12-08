@@ -19,7 +19,13 @@ StreamingID = NewType("StreamingID", str)
 
 @dataclass(frozen=True)
 class _StreamingJob:
+    local_symbol: str
+
     contract_id: int
+
+    primary_exchange: str
+    """Needed to disambiguate SMART contract IDs."""
+
     bar_size: int
     what_to_show: str
     use_regular_trading_hours: bool
@@ -29,7 +35,9 @@ class _StreamingJob:
         cls, bar_list: ib_insync.RealTimeBarList
     ) -> "_StreamingJob":
         return cls(
+            local_symbol=bar_list.contract.localSymbol,
             contract_id=bar_list.contract.conId,
+            primary_exchange=bar_list.contract.primaryExchange,
             bar_size=bar_list.barSize,
             what_to_show=bar_list.whatToShow,
             use_regular_trading_hours=bar_list.useRTH,
@@ -37,7 +45,11 @@ class _StreamingJob:
 
     def start_request(self, ib_client: ib_insync.IB) -> ib_insync.RealTimeBarList:
         return ib_client.reqRealTimeBars(
-            ib_insync.Contract(conId=self.contract_id),
+            ib_insync.Contract(
+                conId=self.contract_id,
+                primaryExchange=self.primary_exchange,
+                localSymbol=self.local_symbol,
+            ),
             barSize=self.bar_size,
             whatToShow=self.what_to_show,
             useRTH=self.use_regular_trading_hours,
@@ -87,18 +99,15 @@ class StreamingManager:
                 )
                 continue
 
-            contract = ib_insync.Contract(conId=streaming_job.contract_id)
             streaming_id = StreamingID(doc.id)
 
             async def _resume_job(ib_client: ib_insync.IB) -> None:
                 try:
-                    await self._start_job(
-                        ib_client, contract, streaming_job, streaming_id
-                    )
+                    await self._start_job(ib_client, streaming_job, streaming_id)
                 except Exception:
                     logging.exception(f"Failed to resume streaming job {streaming_id}")
 
-            logging.info(f"Resuming streaming for {contract} with ID {streaming_id}")
+            logging.info(f"Resuming streaming for {streaming_job} with ID {streaming_id}")
             ib_thread.schedule(_resume_job)
             yield streaming_id
 
@@ -162,6 +171,8 @@ class StreamingManager:
 
         streaming_job = _StreamingJob(
             contract_id=contract.conId,
+            primary_exchange=contract.primaryExchange,
+            local_symbol=contract.localSymbol,
             bar_size=5,
             what_to_show=bar_source,
             use_regular_trading_hours=regular_trading_hours_only,
@@ -170,13 +181,12 @@ class StreamingManager:
         streaming_id = self._record_job_in_firestore(streaming_job)
         logging.info(f"Starting streaming for {contract} with ID {streaming_id}")
 
-        await self._start_job(ib_client, contract, streaming_job, streaming_id)
+        await self._start_job(ib_client, streaming_job, streaming_id)
         return streaming_id
 
     async def _start_job(
         self,
         ib_client: ib_insync.IB,
-        contract: ib_insync.Contract,
         streaming_job: _StreamingJob,
         streaming_id: StreamingID,
     ) -> None:
