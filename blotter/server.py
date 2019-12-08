@@ -2,7 +2,6 @@ import asyncio
 import concurrent.futures
 import logging
 from datetime import datetime
-from enum import Enum, unique
 from typing import Awaitable, Callable, Dict, Optional, TypeVar
 
 import grpc
@@ -10,51 +9,8 @@ import ib_insync
 import pandas as pd
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.ib_helpers import IBThread
+from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
 from google.cloud import bigquery, error_reporting
-
-
-@unique
-class _TableColumn(Enum):
-    TIMESTAMP = "timestamp"
-    OPEN = "open"
-    HIGH = "high"
-    LOW = "low"
-    CLOSE = "close"
-    VOLUME = "volume"
-    AVERAGE_PRICE = "average"
-    BAR_COUNT = "bar_count"
-    BAR_SOURCE = "bar_source"
-
-
-def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
-    client = bigquery.Client()
-    dataset_id = "blotter"
-
-    dataset_ref = client.dataset(dataset_id)
-    table_ref = dataset_ref.table(table_id)
-    config = bigquery.job.LoadJobConfig(
-        time_partitioning=bigquery.table.TimePartitioning(
-            field=_TableColumn.TIMESTAMP.value
-        ),
-        schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
-    )
-
-    job = client.load_table_from_dataframe(df, table_ref, job_config=config)
-
-    def _report_job_exception(job: bigquery.job.LoadJob) -> None:
-        try:
-            result = job.result()
-            logging.info(f"BigQuery job {job.job_id} completed with result: {result}")
-        except Exception:
-            logging.exception(f"Exception thrown from BigQuery job {job.job_id}")
-            error_reporting.Client().report_exception()
-
-    job.add_done_callback(_report_job_exception)
-    return job
-
-
-def _table_name_for_contract(contract: ib_insync.Contract) -> str:
-    return str(contract.symbol)
 
 
 async def _qualify_contract_specifier(
@@ -122,21 +78,21 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             # See fields on BarData.
             df = pd.DataFrame(
                 data={
-                    _TableColumn.TIMESTAMP.value: df["date"],
-                    _TableColumn.OPEN.value: df["open"],
-                    _TableColumn.HIGH.value: df["high"],
-                    _TableColumn.LOW.value: df["low"],
-                    _TableColumn.CLOSE.value: df["close"],
-                    _TableColumn.VOLUME.value: df["volume"],
-                    _TableColumn.AVERAGE_PRICE.value: df["average"],
-                    _TableColumn.BAR_COUNT.value: df["barCount"],
+                    TableColumn.TIMESTAMP.value: df["date"],
+                    TableColumn.OPEN.value: df["open"],
+                    TableColumn.HIGH.value: df["high"],
+                    TableColumn.LOW.value: df["low"],
+                    TableColumn.CLOSE.value: df["close"],
+                    TableColumn.VOLUME.value: df["volume"],
+                    TableColumn.AVERAGE_PRICE.value: df["average"],
+                    TableColumn.BAR_COUNT.value: df["barCount"],
                 }
             )
 
-            df[_TableColumn.BAR_SOURCE.value] = barList.whatToShow
+            df[TableColumn.BAR_SOURCE.value] = barList.whatToShow
 
             logging.debug(df)
-            return _upload_dataframe(_table_name_for_contract(con), df)
+            return upload_dataframe(table_name_for_contract(con), df)
 
         job = self._run_in_ib_thread(fetch_bars).result()
         logging.info(f"BigQuery backfill job launched: {job.job_id}")
@@ -162,21 +118,21 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 # See fields on RealTimeBar.
                 df = pd.DataFrame(
                     data={
-                        _TableColumn.TIMESTAMP.value: df["time"],
-                        _TableColumn.OPEN.value: df["open_"],
-                        _TableColumn.HIGH.value: df["high"],
-                        _TableColumn.LOW.value: df["low"],
-                        _TableColumn.CLOSE.value: df["close"],
-                        _TableColumn.VOLUME.value: df["volume"],
-                        _TableColumn.AVERAGE_PRICE.value: df["wap"],
-                        _TableColumn.BAR_COUNT.value: df["count"],
+                        TableColumn.TIMESTAMP.value: df["time"],
+                        TableColumn.OPEN.value: df["open_"],
+                        TableColumn.HIGH.value: df["high"],
+                        TableColumn.LOW.value: df["low"],
+                        TableColumn.CLOSE.value: df["close"],
+                        TableColumn.VOLUME.value: df["volume"],
+                        TableColumn.AVERAGE_PRICE.value: df["wap"],
+                        TableColumn.BAR_COUNT.value: df["count"],
                     }
                 )
 
-                df[_TableColumn.BAR_SOURCE.value] = bars.whatToShow
+                df[TableColumn.BAR_SOURCE.value] = bars.whatToShow
 
                 logging.debug(df)
-                job = _upload_dataframe(_table_name_for_contract(bars.contract), df)
+                job = upload_dataframe(table_name_for_contract(bars.contract), df)
 
                 logging.info(f"BigQuery data import job launched: {job.job_id}")
             except Exception:
