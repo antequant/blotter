@@ -1,5 +1,8 @@
+import asyncio
 import logging
-from typing import Dict, NewType
+import math
+from datetime import timedelta
+from typing import Dict, NewType, Optional
 
 import ib_insync
 import pandas as pd
@@ -17,12 +20,43 @@ class StreamingManager:
     Manages the lifetime of market data streaming requests.
     """
 
+    _MAX_BIGQUERY_OPERATIONS_PER_DAY = 1000
+    """The maximum number of BigQuery operations permitted per table per day."""
+
+    _BIGQUERY_SAFETY_HEADROOM = 0.5
+    """What % of the BigQuery operations allowance to actually use, to leave headroom for other things."""
+
+    _BAR_SIZE = timedelta(seconds=5)
+    """The granularity of real-time data bars, and (while streaming) how quickly they arrive."""
+
+    _MAX_BATCH_LATENCY = timedelta(minutes=10)
+    """The longest length of time we should wait to upload bars. In other words, how old the data is permitted to be."""
+
     _real_time_bars: Dict[StreamingID, ib_insync.RealTimeBarList]
     """Ongoing streaming data requests."""
 
     def __init__(self) -> None:
         self._real_time_bars = {}
         super().__init__()
+
+    @classmethod
+    @property
+    def _preferred_batch_size(cls) -> int:
+        bars_per_day = timedelta(days=1) / cls._BAR_SIZE
+
+        permitted_ops = (
+            cls._MAX_BIGQUERY_OPERATIONS_PER_DAY * cls._BIGQUERY_SAFETY_HEADROOM
+        )
+
+        batch_size = math.ceil(bars_per_day / permitted_ops)
+        assert batch_size >= 1, "Batch size should be a natural number"
+
+        if batch_size * cls._BAR_SIZE > cls._MAX_BATCH_LATENCY:
+            logging.warn(
+                f"Preferred batch size {batch_size} would take {batch_size * cls._BAR_SIZE} to collect, greater than maximum {cls._MAX_BATCH_LATENCY}"
+            )
+
+        return batch_size
 
     async def start_stream(
         self,
@@ -39,14 +73,55 @@ class StreamingManager:
         WARNING: This method does no checking for duplicate requests.
         """
 
-        def _bars_updated(bars: ib_insync.RealTimeBarList, has_new_bar: bool) -> None:
-            logging.debug(f"Received {len(bars)} bars (has_new_bar={has_new_bar})")
+        batch_timer: Optional[asyncio.TimerHandle] = None
 
-            if not bars or not has_new_bar:
+        def _bars_updated(
+            bars: ib_insync.RealTimeBarList,
+            has_new_bar: bool,
+            timer_fired: bool = False,
+        ) -> None:
+            nonlocal batch_timer
+
+            bar_count = len(bars)
+            logging.debug(
+                f"Received {bar_count} bars (has_new_bar={has_new_bar}, timer_fired={timer_fired})"
+            )
+
+            if not bars:
                 return
+
+            batch_size = self._preferred_batch_size
+            if bar_count < batch_size:
+                logging.debug(
+                    f"Skipping upload because bar count {bar_count} is less than batch size {batch_size}"
+                )
+
+                if not batch_timer:
+                    batch_timer = asyncio.get_running_loop().call_later(
+                        self._MAX_BATCH_LATENCY.total_seconds(),
+                        _bars_updated,
+                        bars,
+                        False,
+                        True,
+                    )
+
+                    logging.debug(
+                        f"Scheduled batch flush after {self._MAX_BATCH_LATENCY}"
+                    )
+
+                return
+
+            logging.info(
+                f"Flushing batch of {bar_count} real-time bars (timer_fired={timer_fired})"
+            )
+
+            if batch_timer:
+                batch_timer.cancel()
+                batch_timer = None
 
             try:
                 df = ib_insync.util.df(bars)
+                bars.clear()
 
                 # See fields on RealTimeBar.
                 df = pd.DataFrame(
