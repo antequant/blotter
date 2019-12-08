@@ -47,6 +47,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         self._streaming_manager = StreamingManager()
         super().__init__()
 
+    def resume_streaming(self) -> None:
+        streaming_ids = list(self._streaming_manager.resume_streaming(self._ib_thread))
+        logging.info(f"Resumed streaming IDs {streaming_ids}")
+
     def _run_in_ib_thread(
         self, fn: Callable[[ib_insync.IB], Awaitable[_T]]
     ) -> "concurrent.futures.Future[_T]":

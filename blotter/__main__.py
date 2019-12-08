@@ -42,6 +42,11 @@ parser.add_argument(
     default=7497,
 )
 
+parser.add_argument(
+    "--resume",
+    help="Automatically resume streaming operations from previous runs, if they were not explicitly cancelled.",
+)
+
 
 def error_handler(error: Exception) -> None:
     try:
@@ -82,6 +87,9 @@ def main() -> None:
     port = args.port or random.randint(49152, 65535)
     s = Servicer.start(port, thread)
     print(f"Server listening on port {port}")
+    
+    if args.resume:
+        s.resume_streaming()
 
     thread.run_forever()
 
