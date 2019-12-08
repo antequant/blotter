@@ -37,6 +37,10 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     return job
 
 
+def _table_name_for_contract(contract: ib_insync.Contract) -> str:
+    return str(contract.symbol)
+
+
 async def _qualify_contract_specifier(
     ib_client: ib_insync.IB, specifier: blotter_pb2.ContractSpecifier
 ) -> ib_insync.Contract:
@@ -79,7 +83,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.LoadHistoricalDataResponse:
         logging.info(f"LoadHistoricalData: {request}")
 
-        async def fetch_bars(ib_client: ib_insync.IB) -> pd.DataFrame:
+        async def fetch_bars(ib_client: ib_insync.IB) -> bigquery.LoadJob:
             con = await _qualify_contract_specifier(
                 ib_client, request.contractSpecifier
             )
@@ -97,12 +101,12 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             if not barList:
                 raise RuntimeError(f"Could not load historical data bars")
 
-            return ib_insync.util.df(barList)
+            df = ib_insync.util.df(barList)
+            logging.debug(df)
 
-        df = self._run_in_ib_thread(fetch_bars).result()
-        logging.debug(df)
+            return _upload_dataframe(_table_name_for_contract(con), df)
 
-        job = _upload_dataframe(f"test_{request.contractSpecifier.symbol}", df)
+        job = self._run_in_ib_thread(fetch_bars).result()
         logging.info(f"BigQuery backfill job launched: {job.job_id}")
 
         return blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
@@ -125,7 +129,8 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 df = df.rename(columns={"time": "date"})
                 logging.debug(df)
 
-                job = _upload_dataframe(f"test_{bars.contract.symbol}", df)
+                job = _upload_dataframe(_table_name_for_contract(bars.contract), df)
+
                 logging.info(f"BigQuery data import job launched: {job.job_id}")
             except Exception:
                 logging.exception(f"Cancelling real-time data due to exception")
