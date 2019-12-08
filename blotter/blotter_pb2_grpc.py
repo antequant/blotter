@@ -5,8 +5,9 @@ from blotter import blotter_pb2 as blotter_dot_blotter__pb2
 
 
 class BlotterStub(object):
-  # missing associated documentation comment in .proto file
-  pass
+  """
+  RPC interface to the Blotter microservice, for sending market data to BigQuery.
+  """
 
   def __init__(self, channel):
     """Constructor.
@@ -32,26 +33,32 @@ class BlotterStub(object):
 
 
 class BlotterServicer(object):
-  # missing associated documentation comment in .proto file
-  pass
+  """
+  RPC interface to the Blotter microservice, for sending market data to BigQuery.
+  """
 
   def LoadHistoricalData(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """
+    Loads historical bars for a contract, then enqueues a job to import them into the appropriate BigQuery table.
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def StartRealTimeData(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """
+    Subscribes to real-time data for a contract, streaming bars into the appropriate BigQuery table.
+
+    No guarantees are made about the latency of the BigQuery import, so this is not suitable for hard-real-time trading use cases.
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
   def CancelRealTimeData(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """
+    Cancels a previous real-time data subscription. Any outstanding BigQuery uploads will still complete.
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')

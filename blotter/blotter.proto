@@ -1,7 +1,13 @@
 syntax = "proto3";
 package blotter;
 
+/*
+ * Describes a contract prior to looking up its exact ID.
+ */
 message ContractSpecifier {
+    /*
+     * The type of instrument referred to.
+     */
     enum SecurityType {
         STOCK = 0;
         OPTION = 1;
@@ -18,12 +24,16 @@ message ContractSpecifier {
         FUND = 12;
     }
 
+    /*
+     * The right afforded by the contract (for options, warrants, etc.)
+     */
     enum Right {
         UNSPECIFIED_RIGHT = 0;
         PUT = 1;
         CALL = 2;
     }
 
+    // See ib_insync.Contract for more information on these fields.
     string symbol = 1;
     SecurityType securityType = 2;
     string lastTradeDateOrContractMonth = 3;
@@ -38,6 +48,9 @@ message ContractSpecifier {
     bool includeExpired = 12;
 }
 
+/*
+ * Describes a period (interval) of time.
+ */
 message Duration {
     enum TimeUnit {
         SECONDS = 0;
@@ -51,7 +64,11 @@ message Duration {
     TimeUnit unit = 2;
 }
 
+// See the Blotter service below.
 message LoadHistoricalDataRequest {
+    /*
+     * The interval of trades/quotes to capture within each bar.
+     */
     enum BarSize {
         UNSPECIFIED_SIZE = 0;
         ONE_SECOND = 1;
@@ -77,6 +94,9 @@ message LoadHistoricalDataRequest {
         ONE_MONTH = 2592000;
     }
 
+    /*
+     * The "source" of the bar (i.e., what data the bar is populated with).
+     */
     enum BarSource {
         UNSPECIFIED_SOURCE = 0;
         TRADES = 1;
@@ -95,19 +115,46 @@ message LoadHistoricalDataRequest {
         YIELD_LAST = 14;
     }
 
+    /*
+     * A description of the contract to retrieve bars for.
+     */
     ContractSpecifier contractSpecifier = 1;
+
+    /*
+     * A POSIX timestamp, in UTC, representing the date and time to backfill up until.
+     *
+     * In other words, backfilling will obtain bars prior to this moment.
+     */
     int64 endTimestampUTC = 2;
+
+    /*
+     * The length of time to backfill, counting backwards from `endTimestampUTC`.
+     */
     Duration duration = 3;
+
     BarSize barSize = 4;
+
     BarSource barSource = 5;
+
+    /*
+     * Whether to only load bars that occurred within regular trading hours. If false, bars outside of regular trading hours will also be included.
+     */
     bool regularTradingHoursOnly = 6;
 }
 
+// See the Blotter service below.
 message LoadHistoricalDataResponse {
+    /*
+     * A unique ID for the BigQuery data import job that was created.
+     */
     string backfillJobID = 1;
 }
 
+// See the Blotter service below.
 message StartRealTimeDataRequest {
+    /*
+     * The "source" of the bar (i.e., what data the bar is populated with).
+     */
     enum BarSource {
         UNSPECIFIED_SOURCE = 0;
         TRADES = 1;
@@ -116,24 +163,58 @@ message StartRealTimeDataRequest {
         ASK = 4;
     }
 
+    /*
+     * A description of the contract to start streaming bars for.
+     */
     ContractSpecifier contractSpecifier = 1;
+
     BarSource barSource = 2;
+
+    /*
+     * Whether to only load bars that occur within regular trading hours. If false, bars outside of regular trading hours will also be included.
+     */
     bool regularTradingHoursOnly = 3;
 }
 
+// See the Blotter service below.
 message StartRealTimeDataResponse {
+    /*
+     * A unique ID for the streaming job.
+     *
+     * This ID can later be passed to `CancelRealTimeData` to stop streaming.
+     */
     string requestID = 1;
 }
 
+// See the Blotter service below.
 message CancelRealTimeDataRequest {
+    /*
+     * The unique ID for the streaming job to cancel.
+     */
     string requestID = 1;
 }
 
+// See the Blotter service below.
 message CancelRealTimeDataResponse {}
 
+/*
+ * RPC interface to the Blotter microservice, for sending market data to BigQuery.
+ */
 service Blotter {
+    /*
+     * Loads historical bars for a contract, then enqueues a job to import them into the appropriate BigQuery table.
+     */
     rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (LoadHistoricalDataResponse) {}
 
+    /*
+     * Subscribes to real-time data for a contract, streaming bars into the appropriate BigQuery table.
+     *
+     * No guarantees are made about the latency of the BigQuery import, so this is not suitable for hard-real-time trading use cases.
+     */
     rpc StartRealTimeData(StartRealTimeDataRequest) returns (StartRealTimeDataResponse) {}
+
+    /*
+     * Cancels a previous real-time data subscription. Any outstanding BigQuery uploads will still complete.
+     */
     rpc CancelRealTimeData(CancelRealTimeDataRequest) returns (CancelRealTimeDataResponse) {}
 }
