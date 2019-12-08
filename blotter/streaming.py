@@ -1,18 +1,47 @@
 import asyncio
+import dataclasses
 import logging
 import math
+from dataclasses import dataclass
 from datetime import timedelta
-from typing import Dict, NewType, Optional
+from typing import Dict, Iterator, NewType, Optional
 
 import ib_insync
 import pandas as pd
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.ib_helpers import qualify_contract_specifier
+from blotter.ib_helpers import IBThread, qualify_contract_specifier
 from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
-from google.cloud import error_reporting
+from google.cloud import error_reporting, firestore
 
 StreamingID = NewType("StreamingID", str)
 """A unique ID for ongoing market data streaming."""
+
+
+@dataclass(frozen=True)
+class _StreamingJob:
+    contract_id: int
+    bar_size: int
+    what_to_show: str
+    use_regular_trading_hours: bool
+
+    @classmethod
+    def create_from_bar_list(
+        cls, bar_list: ib_insync.RealTimeBarList
+    ) -> "_StreamingJob":
+        return cls(
+            contract_id=bar_list.contract.conId,
+            bar_size=bar_list.barSize,
+            what_to_show=bar_list.whatToShow,
+            use_regular_trading_hours=bar_list.useRTH,
+        )
+
+    def start_request(self, ib_client: ib_insync.IB) -> ib_insync.RealTimeBarList:
+        return ib_client.reqRealTimeBars(
+            ib_insync.Contract(conId=self.contract_id),
+            barSize=self.bar_size,
+            whatToShow=self.what_to_show,
+            useRTH=self.use_regular_trading_hours,
+        )
 
 
 class StreamingManager:
@@ -32,12 +61,68 @@ class StreamingManager:
     _MAX_BATCH_LATENCY = timedelta(minutes=10)
     """The longest length of time we should wait to upload bars. In other words, how old the data is permitted to be."""
 
+    _FIRESTORE_COLLECTION = "streaming_jobs"
+    """The name of the Firestore document collection storing streaming request metadata, so they can be resumed."""
+
     _real_time_bars: Dict[StreamingID, ib_insync.RealTimeBarList]
-    """Ongoing streaming data requests."""
+    """Active, in-memory streaming data requests."""
 
     def __init__(self) -> None:
         self._real_time_bars = {}
+        self._firestore_db = firestore.Client()
         super().__init__()
+
+    @property
+    def _firestore_collection(self) -> firestore.CollectionReference:
+        return self._firestore_db.collection(self._FIRESTORE_COLLECTION)
+
+    def resume_streaming(self, ib_thread: IBThread) -> Iterator[StreamingID]:
+        docs = self._firestore_collection.stream()
+        for doc in docs:
+            try:
+                streaming_job = _StreamingJob(**doc.to_dict())
+            except Exception:
+                logging.exception(
+                    f"Failed to deserialize streaming job from document {doc}"
+                )
+                continue
+
+            contract = ib_insync.Contract(conId=streaming_job.contract_id)
+            streaming_id = StreamingID(doc.id)
+
+            async def _resume_job(ib_client: ib_insync.IB) -> None:
+                try:
+                    await self._start_job(
+                        ib_client, contract, streaming_job, streaming_id
+                    )
+                except Exception:
+                    logging.exception(f"Failed to resume streaming job {streaming_id}")
+
+            logging.info(f"Resuming streaming for {contract} with ID {streaming_id}")
+            ib_thread.schedule(_resume_job)
+            yield streaming_id
+
+    def _record_job_in_firestore(self, job: _StreamingJob) -> StreamingID:
+        doc = self._firestore_collection.document()
+        logging.debug(f"Recording streaming job with ID {doc.id}: {job}")
+
+        doc.set(dataclasses.asdict(job))
+        return StreamingID(doc.id)
+
+    def _delete_job_from_firestore(self, job_id: StreamingID) -> None:
+        logging.debug(f"Removing streaming job with ID {job_id}")
+        self._firestore_collection.document(job_id).delete()
+
+    def _cancel_job(
+        self, ib_client: ib_insync.IB, streaming_id: StreamingID
+    ) -> Optional[ib_insync.RealTimeBarList]:
+        logging.debug(f"_real_time_bars before cancelling: {self._real_time_bars}")
+        bar_list = self._real_time_bars.pop(streaming_id, None)
+        if bar_list is not None:
+            ib_client.cancelRealTimeBars(bar_list)
+
+        self._delete_job_from_firestore(streaming_id)
+        return bar_list
 
     @classmethod
     @property
@@ -73,6 +158,28 @@ class StreamingManager:
         WARNING: This method does no checking for duplicate requests.
         """
 
+        contract = await qualify_contract_specifier(ib_client, contract_specifier)
+
+        streaming_job = _StreamingJob(
+            contract_id=contract.conId,
+            bar_size=5,
+            what_to_show=bar_source,
+            use_regular_trading_hours=regular_trading_hours_only,
+        )
+
+        streaming_id = self._record_job_in_firestore(streaming_job)
+        logging.info(f"Starting streaming for {contract} with ID {streaming_id}")
+
+        await self._start_job(ib_client, contract, streaming_job, streaming_id)
+        return streaming_id
+
+    async def _start_job(
+        self,
+        ib_client: ib_insync.IB,
+        contract: ib_insync.Contract,
+        streaming_job: _StreamingJob,
+        streaming_id: StreamingID,
+    ) -> None:
         batch_timer: Optional[asyncio.TimerHandle] = None
 
         def _bars_updated(
@@ -147,32 +254,14 @@ class StreamingManager:
                 logging.exception(f"Cancelling real-time data due to exception")
                 error_reporting.Client().report_exception()
 
-                ib_client.cancelRealTimeBars(bars)
+                self._cancel_job(ib_client, streaming_id)
 
-                streaming_id = StreamingID(str(bars.reqId))
-                if streaming_id in self._real_time_bars:
-                    del self._real_time_bars[streaming_id]
-
-        con = await qualify_contract_specifier(ib_client, contract_specifier)
-
-        bar_list = ib_client.reqRealTimeBars(
-            contract=con,
-            barSize=5,
-            whatToShow=bar_source,
-            useRTH=regular_trading_hours_only,
-        )
-
-        streaming_id = StreamingID(str(bar_list.reqId))
-        if streaming_id in self._real_time_bars:
-            logging.error(
-                f'Unexpectedly found "{streaming_id}" already in tracked bars: {self._real_time_bars}'
-            )
+        bar_list = streaming_job.start_request(ib_client)
 
         self._real_time_bars[streaming_id] = bar_list
         logging.debug(f"_real_time_bars: {self._real_time_bars}")
 
         bar_list.updateEvent += _bars_updated
-        return streaming_id
 
     async def cancel_stream(
         self, ib_client: ib_insync.IB, streaming_id: StreamingID
@@ -183,11 +272,6 @@ class StreamingManager:
         If the data is no longer streaming, nothing happens.
         """
 
-        logging.debug(f"_real_time_bars: {self._real_time_bars}")
-
-        bar_list = self._real_time_bars.pop(streaming_id, None)
-        if bar_list is None:
-            return
-
-        ib_client.cancelRealTimeBars(bar_list)
-        logging.info(f"Cancelled real time bars for contract {bar_list.contract}")
+        bar_list = self._cancel_job(ib_client, streaming_id)
+        if bar_list is not None:
+            logging.info(f"Cancelled real time bars for contract {bar_list.contract}")
