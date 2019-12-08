@@ -7,10 +7,9 @@ from typing import Awaitable, Callable, Dict, Optional, TypeVar
 import grpc
 import ib_insync
 import pandas as pd
-from google.cloud import bigquery, error_reporting
-
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.ib_helpers import IBThread
+from google.cloud import bigquery, error_reporting
 
 
 def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
@@ -153,6 +152,8 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 )
 
             self._real_time_bars[req_id] = bar_list
+            logging.debug(f"_real_time_bars: {self._real_time_bars}")
+
             bar_list.updateEvent += bars_updated
 
             return req_id
@@ -170,8 +171,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logging.info(f"CancelRealTimeData: {request}")
 
         async def cancel_stream(ib_client: ib_insync.IB) -> None:
+            logging.debug(f"_real_time_bars: {self._real_time_bars}")
+
             bar_list = self._real_time_bars.pop(request.requestID, None)
-            if bar_list:
+            if bar_list is not None:
                 ib_client.cancelRealTimeBars(bar_list)
                 logging.info(
                     f"Cancelled real time bars for contract {bar_list.contract}"
