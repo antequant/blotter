@@ -38,6 +38,7 @@ async def backfill_bars(
     if not barList:
         raise RuntimeError(f"Could not load historical data bars for {con}")
 
+    logging.info(f"Loaded {len(barList)} historical bars for {con}")
     df = ib_insync.util.df(barList)
 
     # See fields on BarData.
