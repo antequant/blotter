@@ -23,6 +23,7 @@ class _TableColumn(Enum):
     VOLUME = "volume"
     AVERAGE_PRICE = "average"
     BAR_COUNT = "bar_count"
+    BAR_SOURCE = "bar_source"
 
 
 def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
@@ -130,6 +131,8 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 }
             )
 
+            df[_TableColumn.BAR_SOURCE] = barList.whatToShow
+
             logging.debug(df)
             return _upload_dataframe(_table_name_for_contract(con), df)
 
@@ -167,6 +170,8 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                         _TableColumn.BAR_COUNT: df["count"],
                     }
                 )
+
+                df[_TableColumn.BAR_SOURCE] = bars.whatToShow
 
                 logging.debug(df)
                 job = _upload_dataframe(_table_name_for_contract(bars.contract), df)
