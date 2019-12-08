@@ -30,6 +30,9 @@ parser.add_argument(
 
 securities_group = parser.add_mutually_exclusive_group()
 securities_group.add_argument("--stock", help="Load data for the given stock ticker.")
+
+securities_group.add_argument("--index", help="Load data for the given index.")
+
 securities_group.add_argument(
     "--future", help="Load data for the given futures contract."
 )
@@ -41,8 +44,7 @@ securities_group.add_argument(
 
 parser.add_argument(
     "--exchange",
-    help="The exchange of the security being loaded (sometimes necessary to disambiguate contracts)",
-    default="SMART",
+    help="The exchange of the security being loaded (sometimes necessary to disambiguate contracts). Examples: SMART, IDEALPRO, GLOBEX, CBOE",
 )
 
 parser.add_argument(
@@ -97,6 +99,7 @@ def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifi
         "stock": blotter_pb2.ContractSpecifier.SecurityType.STOCK,
         "future": blotter_pb2.ContractSpecifier.SecurityType.FUTURE,
         "forex": blotter_pb2.ContractSpecifier.SecurityType.CASH,
+        "index": blotter_pb2.ContractSpecifier.SecurityType.INDEX,
     }
 
     specifier = blotter_pb2.ContractSpecifier(
