@@ -40,7 +40,6 @@ class StreamingManager:
         super().__init__()
 
     @classmethod
-    @property
     def _preferred_batch_size(cls) -> int:
         bars_per_day = timedelta(days=1) / cls._BAR_SIZE
 
@@ -90,7 +89,7 @@ class StreamingManager:
             if not bars:
                 return
 
-            batch_size = self._preferred_batch_size
+            batch_size = self._preferred_batch_size()
             if bar_count < batch_size:
                 logging.debug(
                     f"Skipping upload because bar count {bar_count} is less than batch size {batch_size}"
