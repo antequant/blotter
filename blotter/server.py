@@ -1,29 +1,24 @@
 import asyncio
 import concurrent.futures
-import functools
 import logging
 from datetime import datetime
-from typing import Awaitable, Callable, Dict, Optional, TypeVar
+from typing import Awaitable, Callable, Optional, TypeVar
 
 import grpc
 import ib_insync
-import pandas as pd
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.backfill import backfill_bars
-from blotter.ib_helpers import IBThread, qualify_contract_specifier
-from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
+from blotter.ib_helpers import IBThread
+from blotter.streaming import StreamingID, StreamingManager
 from google.cloud import bigquery, error_reporting
-
 
 _T = TypeVar("_T")
 
 
 class Servicer(blotter_pb2_grpc.BlotterServicer):
-    _real_time_bars: Dict[str, ib_insync.RealTimeBarList]
-
     def __init__(self, ib_thread: IBThread):
         self._ib_thread = ib_thread
-        self._real_time_bars = {}
+        self._streaming_manager = StreamingManager()
         super().__init__()
 
     def _run_in_ib_thread(
@@ -48,16 +43,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.LoadHistoricalDataResponse:
         logging.info(f"LoadHistoricalData: {request}")
 
-        job = self._run_in_ib_thread(
-            functools.partial(
-                backfill_bars,
+        async def _backfill(ib_client: ib_insync.IB) -> bigquery.LoadJob:
+            return await backfill_bars(
+                ib_client,
                 contract_specifier=request.contractSpecifier,
                 end_date=datetime.utcfromtimestamp(request.endTimestampUTC),
                 duration=request_helpers.duration_str(request.duration),
                 bar_size=request_helpers.bar_size_str(request.barSize),
+                bar_source=request_helpers.historical_bar_source_str(request.barSource),
                 regular_trading_hours_only=request.regularTradingHoursOnly,
             )
-        ).result()
+
+        job = self._run_in_ib_thread(_backfill).result()
 
         logging.info(f"BigQuery backfill job launched: {job.job_id}")
         return blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
@@ -69,68 +66,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.StartRealTimeDataResponse:
         logging.info(f"StartRealTimeData: {request}")
 
-        def bars_updated(bars: ib_insync.RealTimeBarList, has_new_bar: bool) -> None:
-            logging.debug(f"Received {len(bars)} bars (has_new_bar={has_new_bar})")
-
-            if not bars or not has_new_bar:
-                return
-
-            try:
-                df = ib_insync.util.df(bars)
-
-                # See fields on RealTimeBar.
-                df = pd.DataFrame(
-                    data={
-                        TableColumn.TIMESTAMP.value: df["time"],
-                        TableColumn.OPEN.value: df["open_"],
-                        TableColumn.HIGH.value: df["high"],
-                        TableColumn.LOW.value: df["low"],
-                        TableColumn.CLOSE.value: df["close"],
-                        TableColumn.VOLUME.value: df["volume"],
-                        TableColumn.AVERAGE_PRICE.value: df["wap"],
-                        TableColumn.BAR_COUNT.value: df["count"],
-                    }
-                )
-
-                df[TableColumn.BAR_SOURCE.value] = bars.whatToShow
-
-                logging.debug(df)
-                job = upload_dataframe(table_name_for_contract(bars.contract), df)
-
-                logging.info(f"BigQuery data import job launched: {job.job_id}")
-            except Exception:
-                logging.exception(f"Cancelling real-time data due to exception")
-                error_reporting.Client().report_exception()
-
-                self._ib_thread.client_unsafe.cancelRealTimeBars(bars)
-
-        async def start_stream(ib_client: ib_insync.IB) -> str:
-            con = await qualify_contract_specifier(ib_client, request.contractSpecifier)
-
-            bar_list = ib_client.reqRealTimeBars(
-                contract=con,
-                barSize=5,
-                whatToShow=request_helpers.real_time_bar_source_str(request.barSource),
-                useRTH=request.regularTradingHoursOnly,
+        async def _start_stream(ib_client: ib_insync.IB) -> StreamingID:
+            return await self._streaming_manager.start_stream(
+                ib_client,
+                contract_specifier=request.contractSpecifier,
+                bar_source=request_helpers.real_time_bar_source_str(request.barSource),
+                regular_trading_hours_only=request.regularTradingHoursOnly,
             )
 
-            req_id = str(bar_list.reqId)
-            if req_id in self._real_time_bars:
-                logging.error(
-                    f'Unexpectedly found "{req_id}" already in tracked bars: {self._real_time_bars}'
-                )
+        streaming_id = self._run_in_ib_thread(_start_stream).result()
+        logging.debug(f"Real-time bars streaming ID: {streaming_id}")
 
-            self._real_time_bars[req_id] = bar_list
-            logging.debug(f"_real_time_bars: {self._real_time_bars}")
-
-            bar_list.updateEvent += bars_updated
-
-            return req_id
-
-        req_id = self._run_in_ib_thread(start_stream).result()
-        logging.debug(f"Real-time bars request ID: {req_id}")
-
-        return blotter_pb2.StartRealTimeDataResponse(requestID=req_id)
+        return blotter_pb2.StartRealTimeDataResponse(requestID=streaming_id)
 
     def CancelRealTimeData(
         self,
@@ -139,17 +86,12 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.CancelRealTimeDataResponse:
         logging.info(f"CancelRealTimeData: {request}")
 
-        async def cancel_stream(ib_client: ib_insync.IB) -> None:
-            logging.debug(f"_real_time_bars: {self._real_time_bars}")
+        async def _cancel_stream(ib_client: ib_insync.IB) -> None:
+            await self._streaming_manager.cancel_stream(
+                ib_client, streaming_id=StreamingID(request.requestID)
+            )
 
-            bar_list = self._real_time_bars.pop(request.requestID, None)
-            if bar_list is not None:
-                ib_client.cancelRealTimeBars(bar_list)
-                logging.info(
-                    f"Cancelled real time bars for contract {bar_list.contract}"
-                )
-
-        self._run_in_ib_thread(cancel_stream)
+        self._run_in_ib_thread(_cancel_stream)
         return blotter_pb2.CancelRealTimeDataResponse()
 
 
