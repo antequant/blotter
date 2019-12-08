@@ -8,18 +8,9 @@ import grpc
 import ib_insync
 import pandas as pd
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
-from blotter.ib_helpers import IBThread
+from blotter.ib_helpers import IBThread, qualify_contract_specifier
 from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
 from google.cloud import bigquery, error_reporting
-
-
-async def _qualify_contract_specifier(
-    ib_client: ib_insync.IB, specifier: blotter_pb2.ContractSpecifier
-) -> ib_insync.Contract:
-    contract = request_helpers.contract_from_specifier(specifier)
-    await ib_client.qualifyContractsAsync(contract)
-
-    return contract
 
 
 _T = TypeVar("_T")
@@ -56,9 +47,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logging.info(f"LoadHistoricalData: {request}")
 
         async def fetch_bars(ib_client: ib_insync.IB) -> bigquery.LoadJob:
-            con = await _qualify_contract_specifier(
-                ib_client, request.contractSpecifier
-            )
+            con = await qualify_contract_specifier(ib_client, request.contractSpecifier)
 
             barList = await ib_client.reqHistoricalDataAsync(
                 contract=con,
@@ -142,9 +131,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 self._ib_thread.client_unsafe.cancelRealTimeBars(bars)
 
         async def start_stream(ib_client: ib_insync.IB) -> str:
-            con = await _qualify_contract_specifier(
-                ib_client, request.contractSpecifier
-            )
+            con = await qualify_contract_specifier(ib_client, request.contractSpecifier)
 
             bar_list = ib_client.reqRealTimeBars(
                 contract=con,

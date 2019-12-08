@@ -1,7 +1,19 @@
 import asyncio
 import concurrent.futures
-from ib_insync import IB
 from typing import Awaitable, Callable, NoReturn, TypeVar
+
+from blotter import blotter_pb2, request_helpers
+from ib_insync import IB, Contract
+
+
+async def qualify_contract_specifier(
+    ib_client: IB, specifier: blotter_pb2.ContractSpecifier
+) -> Contract:
+    contract = request_helpers.contract_from_specifier(specifier)
+    await ib_client.qualifyContractsAsync(contract)
+
+    return contract
+
 
 _T = TypeVar("_T")
 
