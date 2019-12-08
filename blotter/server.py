@@ -1,5 +1,6 @@
 import asyncio
 import concurrent.futures
+import functools
 import logging
 from datetime import datetime
 from typing import Awaitable, Callable, Dict, Optional, TypeVar
@@ -8,6 +9,7 @@ import grpc
 import ib_insync
 import pandas as pd
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
+from blotter.backfill import backfill_bars
 from blotter.ib_helpers import IBThread, qualify_contract_specifier
 from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
 from google.cloud import bigquery, error_reporting
@@ -46,46 +48,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.LoadHistoricalDataResponse:
         logging.info(f"LoadHistoricalData: {request}")
 
-        async def fetch_bars(ib_client: ib_insync.IB) -> bigquery.LoadJob:
-            con = await qualify_contract_specifier(ib_client, request.contractSpecifier)
-
-            barList = await ib_client.reqHistoricalDataAsync(
-                contract=con,
-                endDateTime=datetime.utcfromtimestamp(request.endTimestampUTC),
-                durationStr=request_helpers.duration_str(request.duration),
-                barSizeSetting=request_helpers.bar_size_str(request.barSize),
-                whatToShow=request_helpers.historical_bar_source_str(request.barSource),
-                useRTH=request.regularTradingHoursOnly,
-                formatDate=2,  # Convert all timestamps to UTC
+        job = self._run_in_ib_thread(
+            functools.partial(
+                backfill_bars,
+                contract_specifier=request.contractSpecifier,
+                end_date=datetime.utcfromtimestamp(request.endTimestampUTC),
+                duration=request_helpers.duration_str(request.duration),
+                bar_size=request_helpers.bar_size_str(request.barSize),
+                regular_trading_hours_only=request.regularTradingHoursOnly,
             )
+        ).result()
 
-            if not barList:
-                raise RuntimeError(f"Could not load historical data bars")
-
-            df = ib_insync.util.df(barList)
-
-            # See fields on BarData.
-            df = pd.DataFrame(
-                data={
-                    TableColumn.TIMESTAMP.value: df["date"],
-                    TableColumn.OPEN.value: df["open"],
-                    TableColumn.HIGH.value: df["high"],
-                    TableColumn.LOW.value: df["low"],
-                    TableColumn.CLOSE.value: df["close"],
-                    TableColumn.VOLUME.value: df["volume"],
-                    TableColumn.AVERAGE_PRICE.value: df["average"],
-                    TableColumn.BAR_COUNT.value: df["barCount"],
-                }
-            )
-
-            df[TableColumn.BAR_SOURCE.value] = barList.whatToShow
-
-            logging.debug(df)
-            return upload_dataframe(table_name_for_contract(con), df)
-
-        job = self._run_in_ib_thread(fetch_bars).result()
         logging.info(f"BigQuery backfill job launched: {job.job_id}")
-
         return blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
 
     def StartRealTimeData(
