@@ -33,7 +33,9 @@ def _upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     dataset_ref = client.dataset(dataset_id)
     table_ref = dataset_ref.table(table_id)
     config = bigquery.job.LoadJobConfig(
-        time_partitioning=bigquery.table.TimePartitioning(field=_TableColumn.TIMESTAMP),
+        time_partitioning=bigquery.table.TimePartitioning(
+            field=_TableColumn.TIMESTAMP.value
+        ),
         schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
     )
 
@@ -120,18 +122,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             # See fields on BarData.
             df = pd.DataFrame(
                 data={
-                    _TableColumn.TIMESTAMP: df["date"],
-                    _TableColumn.OPEN: df["open"],
-                    _TableColumn.HIGH: df["high"],
-                    _TableColumn.LOW: df["low"],
-                    _TableColumn.CLOSE: df["close"],
-                    _TableColumn.VOLUME: df["volume"],
-                    _TableColumn.AVERAGE_PRICE: df["average"],
-                    _TableColumn.BAR_COUNT: df["barCount"],
+                    _TableColumn.TIMESTAMP.value: df["date"],
+                    _TableColumn.OPEN.value: df["open"],
+                    _TableColumn.HIGH.value: df["high"],
+                    _TableColumn.LOW.value: df["low"],
+                    _TableColumn.CLOSE.value: df["close"],
+                    _TableColumn.VOLUME.value: df["volume"],
+                    _TableColumn.AVERAGE_PRICE.value: df["average"],
+                    _TableColumn.BAR_COUNT.value: df["barCount"],
                 }
             )
 
-            df[_TableColumn.BAR_SOURCE] = barList.whatToShow
+            df[_TableColumn.BAR_SOURCE.value] = barList.whatToShow
 
             logging.debug(df)
             return _upload_dataframe(_table_name_for_contract(con), df)
@@ -160,18 +162,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 # See fields on RealTimeBar.
                 df = pd.DataFrame(
                     data={
-                        _TableColumn.TIMESTAMP: df["time"],
-                        _TableColumn.OPEN: df["open_"],
-                        _TableColumn.HIGH: df["high"],
-                        _TableColumn.LOW: df["low"],
-                        _TableColumn.CLOSE: df["close"],
-                        _TableColumn.VOLUME: df["volume"],
-                        _TableColumn.AVERAGE_PRICE: df["wap"],
-                        _TableColumn.BAR_COUNT: df["count"],
+                        _TableColumn.TIMESTAMP.value: df["time"],
+                        _TableColumn.OPEN.value: df["open_"],
+                        _TableColumn.HIGH.value: df["high"],
+                        _TableColumn.LOW.value: df["low"],
+                        _TableColumn.CLOSE.value: df["close"],
+                        _TableColumn.VOLUME.value: df["volume"],
+                        _TableColumn.AVERAGE_PRICE.value: df["wap"],
+                        _TableColumn.BAR_COUNT.value: df["count"],
                     }
                 )
 
-                df[_TableColumn.BAR_SOURCE] = bars.whatToShow
+                df[_TableColumn.BAR_SOURCE.value] = bars.whatToShow
 
                 logging.debug(df)
                 job = _upload_dataframe(_table_name_for_contract(bars.contract), df)
