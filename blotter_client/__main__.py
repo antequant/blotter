@@ -34,6 +34,11 @@ securities_group.add_argument(
     "--future", help="Load data for the given futures contract."
 )
 
+securities_group.add_argument(
+    "--forex",
+    help="Load data for the given currency, quoted in the base currency specified by --currency",
+)
+
 parser.add_argument(
     "--exchange",
     help="The exchange of the security being loaded (sometimes necessary to disambiguate contracts)",
@@ -91,6 +96,7 @@ def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifi
     type_mapping = {
         "stock": blotter_pb2.ContractSpecifier.SecurityType.STOCK,
         "future": blotter_pb2.ContractSpecifier.SecurityType.FUTURE,
+        "forex": blotter_pb2.ContractSpecifier.SecurityType.CASH,
     }
 
     specifier = blotter_pb2.ContractSpecifier(
