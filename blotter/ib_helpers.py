@@ -1,6 +1,6 @@
 import asyncio
 import concurrent.futures
-from typing import Awaitable, Callable, NoReturn, Optional, TypeVar, Union
+from typing import Awaitable, Callable, NamedTuple, NoReturn, Optional, TypeVar, Union
 
 from blotter import blotter_pb2, request_helpers
 from ib_insync import IB, Contract
@@ -28,9 +28,9 @@ async def qualify_contract_specifier(
 _T = TypeVar("_T")
 
 
-class IBError(Exception):
+class IBWarning(UserWarning):
     """
-    Represents an error originating in TWS.
+    Represents a warning or informative message originating in TWS.
     """
 
     def __init__(
@@ -50,7 +50,44 @@ class IBError(Exception):
         """The TWS error message."""
 
         self.contract = contract
-        """The contract this error is concerning, if applicable."""
+        """The contract this warning is concerning, if applicable."""
+
+        super().__init__()
+
+    def __str__(self) -> str:
+        msg = f"Warning code {self.error_code} concerning request {self.request_id}: {self.error_message}"
+        if self.contract:
+            msg += f" (contract: {self.contract})"
+
+        return msg
+
+    def __repr__(self) -> str:
+        return f"{type(self)}(request_id={self.request_id!r}, error_code={self.error_code!r}, error_message={self.error_message!r}, contract={self.contract!r})"
+
+
+class IBError(Exception):
+    """
+    Represents a hard error originating in TWS.
+    """
+
+    def __init__(
+        self,
+        request_id: int,
+        error_code: int,
+        error_message: str,
+        contract: Optional[Contract],
+    ):
+        self.request_id = request_id
+        """The prior request that this error is concerning."""
+
+        self.error_code = error_code
+        """The TWS error code: https://interactivebrokers.github.io/tws-api/message_codes.html"""
+
+        self.error_message = error_message
+        """The TWS error message."""
+
+        self.contract = contract
+        """The contract this warning is concerning, if applicable."""
 
         super().__init__()
 
@@ -62,7 +99,7 @@ class IBError(Exception):
         return msg
 
     def __repr__(self) -> str:
-        return f"IBError(request_id={self.request_id!r}, error_code={self.error_code!r}, error_message={self.error_message!r}, contract={self.contract!r})"
+        return f"{type(self)}(request_id={self.request_id!r}, error_code={self.error_code!r}, error_message={self.error_message!r}, contract={self.contract!r})"
 
 
 class IBThread:
@@ -84,14 +121,18 @@ class IBThread:
         def _ib_error_event_handler(
             reqId: int, errorCode: int, errorString: str, contract: Optional[Contract]
         ) -> None:
-            error_handler(
-                IBError(
-                    request_id=reqId,
-                    error_code=errorCode,
-                    error_message=errorString,
-                    contract=contract,
-                )
+            is_warning = (errorCode >= 1100 and errorCode < 2000) or (
+                errorCode >= 2100 and errorCode < 3000
             )
+
+            err = (IBWarning if is_warning else IBError)(
+                request_id=reqId,
+                error_code=errorCode,
+                error_message=errorString,
+                contract=contract,
+            )
+
+            error_handler(err)
 
         def _install_error_handlers() -> None:
             ib_insync.util.globalErrorEvent += error_handler

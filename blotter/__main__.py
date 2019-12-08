@@ -6,7 +6,7 @@ from argparse import ArgumentParser
 
 import google.cloud.logging
 import ib_insync
-from blotter.ib_helpers import IBError, IBThread
+from blotter.ib_helpers import IBError, IBThread, IBWarning
 from blotter.server import Servicer
 from google.cloud import error_reporting
 
@@ -46,6 +46,8 @@ parser.add_argument(
 def error_handler(error: Exception) -> None:
     try:
         raise error
+    except IBWarning:
+        logging.warning(f"Warning from IB: {error}")
     except Exception:
         logging.exception(f"Reporting error from IB:")
         error_reporting.Client().report_exception()
