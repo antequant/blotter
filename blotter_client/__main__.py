@@ -30,11 +30,26 @@ parser.add_argument(
 
 securities_group = parser.add_mutually_exclusive_group()
 securities_group.add_argument("--stock", help="Load data for the given stock ticker.")
+securities_group.add_argument(
+    "--future", help="Load data for the given futures contract."
+)
+
+parser.add_argument(
+    "--exchange",
+    help="The exchange of the security being loaded (sometimes necessary to disambiguate contracts)",
+    default="SMART",
+)
 
 parser.add_argument(
     "--currency",
     help="The currency of the security being loaded (sometimes necessary to disambiguate contracts)",
     default="USD",
+)
+
+parser.add_argument(
+    "--contract-month",
+    "--last-trade-date",
+    help="Date in YYYYMM or YYYYMMDD format, specifying the contract month or last trade date of the instrument",
 )
 
 subparsers = parser.add_subparsers(dest="command", help="What to do")
@@ -75,16 +90,21 @@ stop_parser.add_argument("request_id", help="The streaming request to cancel")
 def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifier:
     type_mapping = {
         "stock": blotter_pb2.ContractSpecifier.SecurityType.STOCK,
+        "future": blotter_pb2.ContractSpecifier.SecurityType.FUTURE,
     }
 
+    specifier = blotter_pb2.ContractSpecifier(
+        exchange=args.exchange, currency=args.currency
+    )
+
+    if args.contract_month:
+        specifier.lastTradeDateOrContractMonth = args.contract_month
+
     for key, sec_type in type_mapping.items():
-        if hasattr(args, key):
-            return blotter_pb2.ContractSpecifier(
-                symbol=getattr(args, key),
-                securityType=sec_type,
-                exchange="SMART",
-                currency=args.currency,
-            )
+        if getattr(args, key):
+            specifier.symbol = getattr(args, key)
+            specifier.securityType = sec_type
+            return specifier
 
     raise RuntimeError(f"Security not specified")
 
