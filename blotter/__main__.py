@@ -6,8 +6,9 @@ from argparse import ArgumentParser
 
 import google.cloud.logging
 import ib_insync
-from blotter.ib_helpers import IBThread
+from blotter.ib_helpers import IBError, IBThread
 from blotter.server import Servicer
+from google.cloud import error_reporting
 
 parser = ArgumentParser(
     prog="blotter",
@@ -42,6 +43,14 @@ parser.add_argument(
 )
 
 
+def error_handler(error: Exception) -> None:
+    try:
+        raise error
+    except Exception:
+        logging.exception(f"Reporting error from IB:")
+        error_reporting.Client().report_exception()
+
+
 def main() -> None:
     args = parser.parse_args()
 
@@ -66,7 +75,7 @@ def main() -> None:
     # https://bugs.python.org/issue23057
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    thread = IBThread(ib)
+    thread = IBThread(ib, error_handler=error_handler)
 
     port = args.port or random.randint(49152, 65535)
     s = Servicer.start(port, thread)

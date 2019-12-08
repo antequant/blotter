@@ -60,7 +60,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             try:
                 future.result()
             except Exception:
-                logging.exception(f"Exception thrown in IB thread")
+                logging.exception(f"Exception thrown in IB thread:")
                 error_reporting.Client().report_exception()
 
         fut.add_done_callback(_report_future_exception)
