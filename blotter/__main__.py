@@ -6,9 +6,8 @@ from argparse import ArgumentParser
 
 import google.cloud.logging
 import ib_insync
-
-from blotter import server
 from blotter.ib_helpers import IBThread
+from blotter.server import Servicer
 
 parser = ArgumentParser(
     prog="blotter",
@@ -70,7 +69,7 @@ def main() -> None:
     thread = IBThread(ib)
 
     port = args.port or random.randint(49152, 65535)
-    s = server.start(port, thread)
+    s = Servicer.start(port, thread)
     print(f"Server listening on port {port}")
 
     thread.run_forever()

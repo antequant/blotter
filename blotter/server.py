@@ -16,6 +16,23 @@ _T = TypeVar("_T")
 
 
 class Servicer(blotter_pb2_grpc.BlotterServicer):
+    @classmethod
+    def start(
+        cls,
+        port: int,
+        ib_thread: IBThread,
+        executor: Optional[concurrent.futures.ThreadPoolExecutor] = None,
+    ) -> grpc.Server:
+        if executor is None:
+            executor = concurrent.futures.ThreadPoolExecutor()
+
+        s = grpc.server(executor)
+        blotter_pb2_grpc.add_BlotterServicer_to_server(cls(ib_thread), s)
+        s.add_insecure_port(f"[::]:{port}")
+        s.start()
+
+        return s
+
     def __init__(self, ib_thread: IBThread):
         self._ib_thread = ib_thread
         self._streaming_manager = StreamingManager()
@@ -93,19 +110,3 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
         self._run_in_ib_thread(_cancel_stream)
         return blotter_pb2.CancelRealTimeDataResponse()
-
-
-def start(
-    port: int,
-    ib_thread: IBThread,
-    executor: Optional[concurrent.futures.ThreadPoolExecutor] = None,
-) -> grpc.Server:
-    if executor is None:
-        executor = concurrent.futures.ThreadPoolExecutor()
-
-    s = grpc.server(executor)
-    blotter_pb2_grpc.add_BlotterServicer_to_server(Servicer(ib_thread), s)
-    s.add_insecure_port(f"[::]:{port}")
-    s.start()
-
-    return s
