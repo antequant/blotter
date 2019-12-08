@@ -53,7 +53,7 @@ backfill_parser.add_argument(
     "--bar-source",
     help="Which quotes or data to fetch per bar",
     choices=blotter_pb2.LoadHistoricalDataRequest.BarSource.keys(),
-    default="MIDPOINT",
+    default="TRADES",
 )
 
 duration_group = backfill_parser.add_mutually_exclusive_group()
@@ -66,7 +66,7 @@ start_parser.add_argument(
     "--bar-source",
     help="Which quotes or data to fetch per bar",
     choices=blotter_pb2.StartRealTimeDataRequest.BarSource.keys(),
-    default="MIDPOINT",
+    default="TRADES",
 )
 
 stop_parser = subparsers.add_parser("stop", help="Stop streaming securities data")
