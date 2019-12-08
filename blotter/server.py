@@ -1,8 +1,8 @@
 import asyncio
 import concurrent.futures
 import logging
-from datetime import datetime
-from typing import Awaitable, Callable, Iterator, Optional, TypeVar
+from datetime import datetime, timedelta, timezone
+from typing import Awaitable, Callable, Iterator, Optional, Tuple, TypeVar
 
 import grpc
 import ib_insync
@@ -73,21 +73,44 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> Iterator[blotter_pb2.LoadHistoricalDataResponse]:
         logging.info(f"LoadHistoricalData: {request}")
 
-        async def _backfill(ib_client: ib_insync.IB) -> bigquery.LoadJob:
+        td = request_helpers.duration_timedelta_atleast(request.duration)
+        end_date = datetime.fromtimestamp(request.endTimestampUTC, tz=timezone.utc)
+
+        if td.days <= 10:
+            duration = request_helpers.duration_str(request.duration)
+            start_date = end_date - timedelta(seconds=1)
+        else:
+            logging.debug(f"Splitting requested duration {td}")
+            duration = request_helpers.duration_str(
+                blotter_pb2.Duration(count=10, unit=blotter_pb2.Duration.TimeUnit.DAYS)
+            )
+
+            start_date = end_date - td
+
+        async def _backfill(
+            ib_client: ib_insync.IB,
+        ) -> Tuple[datetime, bigquery.LoadJob]:
+            nonlocal end_date
+
+            logging.info(
+                f"Backfilling {duration} from {end_date} of {request.contractSpecifier}"
+            )
+
             return await backfill_bars(
                 ib_client,
                 contract_specifier=request.contractSpecifier,
-                end_date=datetime.utcfromtimestamp(request.endTimestampUTC),
-                duration=request_helpers.duration_str(request.duration),
+                end_date=end_date,
+                duration=duration,
                 bar_size=request_helpers.bar_size_str(request.barSize),
                 bar_source=request_helpers.historical_bar_source_str(request.barSource),
                 regular_trading_hours_only=request.regularTradingHoursOnly,
             )
 
-        job = self._run_in_ib_thread(_backfill).result()
+        while end_date > start_date:
+            (end_date, job) = self._run_in_ib_thread(_backfill).result()
 
-        logging.info(f"BigQuery backfill job launched: {job.job_id}")
-        yield blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
+            logging.info(f"BigQuery backfill job launched: {job.job_id}")
+            yield blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
 
     def StartRealTimeData(
         self,

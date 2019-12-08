@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from typing import Tuple
 
 import ib_insync
 import pandas as pd
@@ -18,9 +19,11 @@ async def backfill_bars(
     bar_size: str,
     bar_source: str,
     regular_trading_hours_only: bool,
-) -> bigquery.LoadJob:
+) -> Tuple[datetime, bigquery.LoadJob]:
     """
     Fetches historical bars (of type `bar_source` and interval `bar_size`) for the given contract over the specified time interval, then enqueues a BigQuery import job.
+
+    Returns the date of the earliest bar loaded and a reference the job that was started.
     """
 
     con = await qualify_contract_specifier(ib_client, contract_specifier)
@@ -37,6 +40,8 @@ async def backfill_bars(
 
     if not barList:
         raise RuntimeError(f"Could not load historical data bars for {con}")
+
+    earliest_date = barList[0].date
 
     logging.info(f"Loaded {len(barList)} historical bars for {con}")
     df = ib_insync.util.df(barList)
@@ -58,4 +63,6 @@ async def backfill_bars(
     df[TableColumn.BAR_SOURCE.value] = barList.whatToShow
 
     logging.debug(df)
-    return upload_dataframe(table_name_for_contract(con), df)
+    job = upload_dataframe(table_name_for_contract(con), df)
+
+    return (earliest_date, job)

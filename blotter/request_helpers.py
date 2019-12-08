@@ -1,3 +1,4 @@
+from datetime import timedelta
 from decimal import Decimal
 
 import ib_insync
@@ -68,6 +69,22 @@ def duration_str(duration: Duration) -> str:
     }
 
     return f"{duration.count} {time_unit_mapping[duration.unit]}"
+
+
+def duration_timedelta_atleast(duration: Duration) -> timedelta:
+    """
+    Converts a `Duration` into a `timedelta` which is _at least_ as long.
+    """
+
+    time_unit_mapping = {
+        Duration.TimeUnit.SECONDS: lambda n: timedelta(seconds=n),
+        Duration.TimeUnit.DAYS: lambda n: timedelta(days=n),
+        Duration.TimeUnit.WEEKS: lambda n: timedelta(weeks=n),
+        Duration.TimeUnit.MONTHS: lambda n: timedelta(days=31),
+        Duration.TimeUnit.YEARS: lambda n: timedelta(days=366),
+    }
+
+    return time_unit_mapping[duration.unit](duration.count)
 
 
 def bar_size_str(bar_size: LoadHistoricalDataRequest.BarSize) -> str:
