@@ -63,4 +63,4 @@ def table_name_for_contract(contract: ib_insync.Contract) -> str:
     Picks a BigQuery table name for the given contract.
     """
 
-    return str(contract.symbol)
+    return f"{contract.localSymbol}_{contract.conId}"
