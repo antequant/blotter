@@ -14,7 +14,12 @@ async def qualify_contract_specifier(
     """
 
     contract = request_helpers.contract_from_specifier(specifier)
-    await ib_client.qualifyContractsAsync(contract)
+
+    result = await ib_client.qualifyContractsAsync(contract)
+    if not result:
+        raise RuntimeError(
+            f"Could not qualify contract {contract} from specifier {specifier}"
+        )
 
     return contract
 
