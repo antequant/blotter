@@ -9,6 +9,10 @@ from ib_insync import IB, Contract
 async def qualify_contract_specifier(
     ib_client: IB, specifier: blotter_pb2.ContractSpecifier
 ) -> Contract:
+    """
+    Determines the most likely contract that corresponds to the given description.
+    """
+
     contract = request_helpers.contract_from_specifier(specifier)
     await ib_client.qualifyContractsAsync(contract)
 

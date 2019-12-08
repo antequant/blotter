@@ -1,15 +1,20 @@
+from decimal import Decimal
+
+import ib_insync
 from blotter.blotter_pb2 import (
     ContractSpecifier,
     Duration,
     LoadHistoricalDataRequest,
     StartRealTimeDataRequest,
 )
-from decimal import Decimal
-import ib_insync
 
 
 def contract_from_specifier(specifier: ContractSpecifier) -> ib_insync.Contract:
-    """Converts a ContractLookup message into an ib_insync Contract object."""
+    """
+    Converts a ContractSpecifier into an ib_insync Contract object.
+    
+    This does not guarantee that the resulting Contract actually refers to a real security.
+    """
 
     security_type_mapping = {
         ContractSpecifier.SecurityType.STOCK: "STK",
@@ -50,6 +55,10 @@ def contract_from_specifier(specifier: ContractSpecifier) -> ib_insync.Contract:
 
 
 def duration_str(duration: Duration) -> str:
+    """
+    Converts a `Duration` into the string format expected by ib_insync.
+    """
+
     time_unit_mapping = {
         Duration.TimeUnit.SECONDS: "S",
         Duration.TimeUnit.DAYS: "D",
@@ -62,6 +71,10 @@ def duration_str(duration: Duration) -> str:
 
 
 def bar_size_str(bar_size: LoadHistoricalDataRequest.BarSize) -> str:
+    """
+    Converts a `BarSize` into the string format expected by ib_insync.
+    """
+
     bar_size_mapping = {
         LoadHistoricalDataRequest.BarSize.ONE_SECOND: "1 secs",
         LoadHistoricalDataRequest.BarSize.FIVE_SECONDS: "5 secs",
@@ -90,9 +103,16 @@ def bar_size_str(bar_size: LoadHistoricalDataRequest.BarSize) -> str:
 
 
 def historical_bar_source_str(bar_source: LoadHistoricalDataRequest.BarSource) -> str:
+    """
+    Converts a `BarSource` into the string format expected by ib_insync for `whatToShow`.
+    """
+
     return str(LoadHistoricalDataRequest.BarSource.Name(bar_source))
 
 
 def real_time_bar_source_str(bar_source: StartRealTimeDataRequest.BarSource) -> str:
-    return str(StartRealTimeDataRequest.BarSource.Name(bar_source))
+    """
+    Converts a `BarSource` into the string format expected by ib_insync for `whatToShow`.
+    """
 
+    return str(StartRealTimeDataRequest.BarSource.Name(bar_source))

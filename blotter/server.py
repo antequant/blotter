@@ -16,15 +16,20 @@ _T = TypeVar("_T")
 
 
 class Servicer(blotter_pb2_grpc.BlotterServicer):
+    """
+    The implementation of the Blotter RPC service, responsible for handling client requests to start/stop blotting different instruments.
+    """
+
     @classmethod
     def start(
         cls,
         port: int,
         ib_thread: IBThread,
-        executor: Optional[concurrent.futures.ThreadPoolExecutor] = None,
+        executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(),
     ) -> grpc.Server:
-        if executor is None:
-            executor = concurrent.futures.ThreadPoolExecutor()
+        """
+        Instantiates a server, binds it to the given port and begins accepting requests on `executor`.
+        """
 
         s = grpc.server(executor)
         blotter_pb2_grpc.add_BlotterServicer_to_server(cls(ib_thread), s)
@@ -34,6 +39,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         return s
 
     def __init__(self, ib_thread: IBThread):
+        """
+        Initializes this handler to invoke ib_insync via the given `ib_thread`.
+        """
+
         self._ib_thread = ib_thread
         self._streaming_manager = StreamingManager()
         super().__init__()
@@ -41,6 +50,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     def _run_in_ib_thread(
         self, fn: Callable[[ib_insync.IB], Awaitable[_T]]
     ) -> "concurrent.futures.Future[_T]":
+        """
+        Schedules work on the `IBThread` for this service, reporting any exceptions that occur.
+        """
+
         fut = self._ib_thread.schedule(fn)
 
         def _report_future_exception(future: "concurrent.futures.Future[_T]") -> None:

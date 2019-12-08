@@ -9,10 +9,16 @@ from blotter.upload import TableColumn, table_name_for_contract, upload_datafram
 from google.cloud import error_reporting
 
 StreamingID = NewType("StreamingID", str)
+"""A unique ID for ongoing market data streaming."""
 
 
 class StreamingManager:
+    """
+    Manages the lifetime of market data streaming requests.
+    """
+
     _real_time_bars: Dict[StreamingID, ib_insync.RealTimeBarList]
+    """Ongoing streaming data requests."""
 
     def __init__(self) -> None:
         self._real_time_bars = {}
@@ -25,6 +31,14 @@ class StreamingManager:
         bar_source: str,
         regular_trading_hours_only: bool,
     ) -> StreamingID:
+        """
+        Starts streaming data for the given contract and uploading the results into BigQuery.
+
+        Returns an ID (unique for the lifetime of the service) which can later be used to cancel this streaming.
+
+        WARNING: This method does no checking for duplicate requests.
+        """
+
         def _bars_updated(bars: ib_insync.RealTimeBarList, has_new_bar: bool) -> None:
             logging.debug(f"Received {len(bars)} bars (has_new_bar={has_new_bar})")
 
@@ -84,6 +98,12 @@ class StreamingManager:
     async def cancel_stream(
         self, ib_client: ib_insync.IB, streaming_id: StreamingID
     ) -> None:
+        """
+        Cancels a previous streaming request, identified by `streaming_id`.
+
+        If the data is no longer streaming, nothing happens.
+        """
+
         logging.debug(f"_real_time_bars: {self._real_time_bars}")
 
         bar_list = self._real_time_bars.pop(streaming_id, None)

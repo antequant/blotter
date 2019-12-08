@@ -19,6 +19,10 @@ async def backfill_bars(
     bar_source: str,
     regular_trading_hours_only: bool,
 ) -> bigquery.LoadJob:
+    """
+    Fetches historical bars (of type `bar_source` and interval `bar_size`) for the given contract over the specified time interval, then enqueues a BigQuery import job.
+    """
+
     con = await qualify_contract_specifier(ib_client, contract_specifier)
 
     barList = await ib_client.reqHistoricalDataAsync(

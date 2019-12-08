@@ -1,12 +1,11 @@
-import grpc
-import signal
 import logging
+import signal
 import sys
-from blotter import blotter_pb2_grpc, blotter_pb2
-
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
 from datetime import datetime
 
-from argparse import ArgumentParser, Namespace, ArgumentDefaultsHelpFormatter
+import grpc
+from blotter import blotter_pb2, blotter_pb2_grpc
 
 parser = ArgumentParser(
     prog="blotter-client",

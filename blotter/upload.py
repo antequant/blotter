@@ -8,6 +8,12 @@ from google.cloud import bigquery, error_reporting
 
 @unique
 class TableColumn(Enum):
+    """
+    Specifies the known/desired columns for BigQuery tables, so they can be standardized even when the data is merged from different sources.
+
+    Other columns are still permitted, but it is recommended they have a prefix like `unknown_` or `extra_` to indicate that they will not always be populated.
+    """
+
     TIMESTAMP = "timestamp"
     OPEN = "open"
     HIGH = "high"
@@ -20,6 +26,12 @@ class TableColumn(Enum):
 
 
 def upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
+    """
+    Enqueues an asynchronous job to upload the given DataFrame to the named table.
+
+    Returns the job that was started.
+    """
+
     client = bigquery.Client()
     dataset_id = "blotter"
 
@@ -47,4 +59,8 @@ def upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
 
 
 def table_name_for_contract(contract: ib_insync.Contract) -> str:
+    """
+    Picks a BigQuery table name for the given contract.
+    """
+
     return str(contract.symbol)
