@@ -74,6 +74,10 @@ class StreamingManager:
 
                 ib_client.cancelRealTimeBars(bars)
 
+                streaming_id = StreamingID(str(bars.reqId))
+                if streaming_id in self._real_time_bars:
+                    del self._real_time_bars[streaming_id]
+
         con = await qualify_contract_specifier(ib_client, contract_specifier)
 
         bar_list = ib_client.reqRealTimeBars(
