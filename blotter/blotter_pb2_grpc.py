@@ -15,7 +15,7 @@ class BlotterStub(object):
     Args:
       channel: A grpc.Channel.
     """
-    self.LoadHistoricalData = channel.unary_unary(
+    self.LoadHistoricalData = channel.unary_stream(
         '/blotter.Blotter/LoadHistoricalData',
         request_serializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.SerializeToString,
         response_deserializer=blotter_dot_blotter__pb2.LoadHistoricalDataResponse.FromString,
@@ -39,7 +39,7 @@ class BlotterServicer(object):
 
   def LoadHistoricalData(self, request, context):
     """
-    Loads historical bars for a contract, then enqueues a job to import them into the appropriate BigQuery table.
+    Loads historical bars for a contract, then enqueues one or more jobs to import them into the appropriate BigQuery table.
     """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
@@ -66,7 +66,7 @@ class BlotterServicer(object):
 
 def add_BlotterServicer_to_server(servicer, server):
   rpc_method_handlers = {
-      'LoadHistoricalData': grpc.unary_unary_rpc_method_handler(
+      'LoadHistoricalData': grpc.unary_stream_rpc_method_handler(
           servicer.LoadHistoricalData,
           request_deserializer=blotter_dot_blotter__pb2.LoadHistoricalDataRequest.FromString,
           response_serializer=blotter_dot_blotter__pb2.LoadHistoricalDataResponse.SerializeToString,

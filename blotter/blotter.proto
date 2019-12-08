@@ -202,9 +202,9 @@ message CancelRealTimeDataResponse {}
  */
 service Blotter {
     /*
-     * Loads historical bars for a contract, then enqueues a job to import them into the appropriate BigQuery table.
+     * Loads historical bars for a contract, then enqueues one or more jobs to import them into the appropriate BigQuery table.
      */
-    rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (LoadHistoricalDataResponse) {}
+    rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (stream LoadHistoricalDataResponse) {}
 
     /*
      * Subscribes to real-time data for a contract, streaming bars into the appropriate BigQuery table.

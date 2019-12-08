@@ -2,7 +2,7 @@ import asyncio
 import concurrent.futures
 import logging
 from datetime import datetime
-from typing import Awaitable, Callable, Optional, TypeVar
+from typing import Awaitable, Callable, Iterator, Optional, TypeVar
 
 import grpc
 import ib_insync
@@ -70,7 +70,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         self,
         request: blotter_pb2.LoadHistoricalDataRequest,
         context: grpc.ServicerContext,
-    ) -> blotter_pb2.LoadHistoricalDataResponse:
+    ) -> Iterator[blotter_pb2.LoadHistoricalDataResponse]:
         logging.info(f"LoadHistoricalData: {request}")
 
         async def _backfill(ib_client: ib_insync.IB) -> bigquery.LoadJob:
@@ -87,7 +87,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         job = self._run_in_ib_thread(_backfill).result()
 
         logging.info(f"BigQuery backfill job launched: {job.job_id}")
-        return blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
+        yield blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
 
     def StartRealTimeData(
         self,
