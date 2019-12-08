@@ -35,12 +35,13 @@ class StreamingManager:
     _real_time_bars: Dict[StreamingID, ib_insync.RealTimeBarList]
     """Ongoing streaming data requests."""
 
-    def __init__(self) -> None:
+    def __init__(self, batch_size: int = StreamingManager.preferred_batch_size()) -> None:
         self._real_time_bars = {}
+        self._batch_size = batch_size
         super().__init__()
 
     @classmethod
-    def _preferred_batch_size(cls) -> int:
+    def preferred_batch_size(cls) -> int:
         bars_per_day = timedelta(days=1) / cls._BAR_SIZE
 
         permitted_ops = (
@@ -89,10 +90,9 @@ class StreamingManager:
             if not bars:
                 return
 
-            batch_size = self._preferred_batch_size()
-            if bar_count < batch_size:
+            if bar_count < self._batch_size:
                 logging.debug(
-                    f"Skipping upload because bar count {bar_count} is less than batch size {batch_size}"
+                    f"Skipping upload because bar count {bar_count} is less than batch size {self._batch_size}"
                 )
 
                 if not batch_timer:

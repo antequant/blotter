@@ -42,6 +42,12 @@ parser.add_argument(
     default=7497,
 )
 
+parser.add_argument(
+    "--streaming-batch-size",
+    help="The size of batches to create when streaming, before uploading to BigQuery.",
+    type=int,
+)
+
 
 def error_handler(error: Exception) -> None:
     try:
@@ -80,7 +86,12 @@ def main() -> None:
     thread = IBThread(ib, error_handler=error_handler)
 
     port = args.port or random.randint(49152, 65535)
-    s = Servicer.start(port, thread)
+    s = (
+        Servicer.start(port, thread, streaming_batch_size=args.streaming_batch_size)
+        if args.streaming_batch_size
+        else Servicer.start(port, thread)
+    )
+
     print(f"Server listening on port {port}")
 
     thread.run_forever()
