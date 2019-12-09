@@ -35,7 +35,7 @@ class StreamingManager:
     _real_time_bars: Dict[StreamingID, ib_insync.RealTimeBarList]
     """Ongoing streaming data requests."""
 
-    def __init__(self, batch_size: int = StreamingManager.preferred_batch_size()) -> None:
+    def __init__(self, batch_size: int) -> None:
         self._real_time_bars = {}
         self._batch_size = batch_size
         super().__init__()
