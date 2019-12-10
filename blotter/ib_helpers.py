@@ -1,11 +1,36 @@
 import asyncio
 import concurrent.futures
 from dataclasses import dataclass
-from typing import Awaitable, Callable, NamedTuple, NoReturn, Optional, TypeVar, Union
+from typing import (
+    Awaitable,
+    Callable,
+    List,
+    NamedTuple,
+    NoReturn,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 from blotter import blotter_pb2, request_helpers
-from ib_insync import IB, Contract
+from ib_insync import IB, Contract, ContractDetails
 import ib_insync.util
+
+
+@dataclass(frozen=True)
+class AmbiguousContractError(Exception):
+    """
+    Thrown when a contract specifier cannot be disambiguated to a single contract.
+    """
+
+    specifier: blotter_pb2.ContractSpecifier
+    """The provided contract specifier that was ambiguous."""
+
+    possible_contracts: List[ContractDetails]
+    """Details for possible contracts the specifier could be referring to."""
+
+    def __str__(self) -> str:
+        return f"{type(self)}: Contract specifier {self.specifier} is ambiguous: {self.possible_contracts}"
 
 
 async def qualify_contract_specifier(
@@ -19,9 +44,9 @@ async def qualify_contract_specifier(
 
     result = await ib_client.qualifyContractsAsync(contract)
     if not result:
-        raise RuntimeError(
-            f"Could not qualify contract {contract} from specifier {specifier}"
-        )
+        # Would prefer to use this directly in the first place, but unfortunately qualifyContracts*() has some special fixup logic that isn't generalized here.
+        details = await ib_client.reqContractDetailsAsync(contract)
+        raise AmbiguousContractError(specifier=specifier, possible_contracts=details)
 
     return contract
 
@@ -48,7 +73,7 @@ class IBWarning(UserWarning):
     """The contract this warning is concerning, if applicable."""
 
     def __str__(self) -> str:
-        msg = f"Warning code {self.error_code} concerning request {self.request_id}: {self.error_message}"
+        msg = f"{type(self)}: {self.error_code} concerning request {self.request_id}: {self.error_message}"
         if self.contract:
             msg += f" (contract: {self.contract})"
 
@@ -74,11 +99,23 @@ class IBError(Exception):
     """The contract this error is concerning, if applicable."""
 
     def __str__(self) -> str:
-        msg = f"Error code {self.error_code} concerning request {self.request_id}: {self.error_message}"
+        msg = f"{type(self)}: {self.error_code} concerning request {self.request_id}: {self.error_message}"
         if self.contract:
             msg += f" (contract: {self.contract})"
 
         return msg
+
+
+@dataclass(frozen=True)
+class DataError(Exception):
+    """
+    Thrown to indicate unexpected data that the application does not know how to handle.
+    """
+
+    message: str
+
+    def __str__(self) -> str:
+        return f"{type(self)}: {self.message}"
 
 
 class IBThread:
