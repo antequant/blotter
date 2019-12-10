@@ -3,13 +3,15 @@ import logging
 import random
 import signal
 from argparse import ArgumentParser
+from datetime import timedelta
 
 import google.cloud.logging
 import ib_insync
+from google.cloud import error_reporting
+
 from blotter.ib_helpers import IBError, IBThread, IBWarning
 from blotter.server import Servicer
 from blotter.streaming import StreamingManager
-from google.cloud import error_reporting
 
 parser = ArgumentParser(
     prog="blotter",
@@ -46,7 +48,14 @@ parser.add_argument(
 parser.add_argument(
     "--streaming-batch-size",
     help="The size of batches to create when streaming, before uploading to BigQuery.",
-    default=StreamingManager.preferred_batch_size(),
+    default=StreamingManager.DEFAULT_BATCH_SIZE,
+)
+
+parser.add_argument(
+    "--streaming-batch-timeout",
+    help="The maximum duration (in seconds) to wait when batching data from streaming, before uploading to BigQuery.",
+    type=lambda s: timedelta(seconds=float(s)),
+    default=StreamingManager.DEFAULT_BATCH_LATENCY,
 )
 
 
@@ -87,8 +96,11 @@ def main() -> None:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     thread = IBThread(ib, error_handler=error_handler)
-    streaming_manager = StreamingManager(batch_size=args.streaming_batch_size)
     port = args.port or random.randint(49152, 65535)
+    streaming_manager = StreamingManager(
+        batch_size=args.streaming_batch_size, batch_timeout=args.streaming_batch_timeout
+    )
+
     s = Servicer.start(port, thread, streaming_manager)
 
     logging.info(f"Server listening on port {port}")
