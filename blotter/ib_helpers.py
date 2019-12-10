@@ -1,5 +1,6 @@
 import asyncio
 import concurrent.futures
+from dataclasses import dataclass
 from typing import Awaitable, Callable, NamedTuple, NoReturn, Optional, TypeVar, Union
 
 from blotter import blotter_pb2, request_helpers
@@ -28,31 +29,23 @@ async def qualify_contract_specifier(
 _T = TypeVar("_T")
 
 
+@dataclass(frozen=True)
 class IBWarning(UserWarning):
     """
     Represents a warning or informative message originating in TWS.
     """
 
-    def __init__(
-        self,
-        request_id: int,
-        error_code: int,
-        error_message: str,
-        contract: Optional[Contract],
-    ):
-        self.request_id = request_id
-        """The prior request that this error is concerning."""
+    request_id: int
+    """The prior request that this warning is concerning."""
 
-        self.error_code = error_code
-        """The TWS error code: https://interactivebrokers.github.io/tws-api/message_codes.html"""
+    error_code: int
+    """The TWS error code: https://interactivebrokers.github.io/tws-api/message_codes.html"""
 
-        self.error_message = error_message
-        """The TWS error message."""
+    error_message: str
+    """The TWS error message."""
 
-        self.contract = contract
-        """The contract this warning is concerning, if applicable."""
-
-        super().__init__()
+    contract: Optional[Contract]
+    """The contract this warning is concerning, if applicable."""
 
     def __str__(self) -> str:
         msg = f"Warning code {self.error_code} concerning request {self.request_id}: {self.error_message}"
@@ -61,35 +54,24 @@ class IBWarning(UserWarning):
 
         return msg
 
-    def __repr__(self) -> str:
-        return f"{type(self)}(request_id={self.request_id!r}, error_code={self.error_code!r}, error_message={self.error_message!r}, contract={self.contract!r})"
 
-
+@dataclass(frozen=True)
 class IBError(Exception):
     """
     Represents a hard error originating in TWS.
     """
 
-    def __init__(
-        self,
-        request_id: int,
-        error_code: int,
-        error_message: str,
-        contract: Optional[Contract],
-    ):
-        self.request_id = request_id
-        """The prior request that this error is concerning."""
+    request_id: int
+    """The prior request that this error is concerning."""
 
-        self.error_code = error_code
-        """The TWS error code: https://interactivebrokers.github.io/tws-api/message_codes.html"""
+    error_code: int
+    """The TWS error code: https://interactivebrokers.github.io/tws-api/message_codes.html"""
 
-        self.error_message = error_message
-        """The TWS error message."""
+    error_message: str
+    """The TWS error message."""
 
-        self.contract = contract
-        """The contract this warning is concerning, if applicable."""
-
-        super().__init__()
+    contract: Optional[Contract]
+    """The contract this error is concerning, if applicable."""
 
     def __str__(self) -> str:
         msg = f"Error code {self.error_code} concerning request {self.request_id}: {self.error_message}"
@@ -97,9 +79,6 @@ class IBError(Exception):
             msg += f" (contract: {self.contract})"
 
         return msg
-
-    def __repr__(self) -> str:
-        return f"{type(self)}(request_id={self.request_id!r}, error_code={self.error_code!r}, error_message={self.error_message!r}, contract={self.contract!r})"
 
 
 class IBThread:
