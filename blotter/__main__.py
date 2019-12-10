@@ -71,7 +71,7 @@ def main() -> None:
 
     ib = ib_insync.IB()
 
-    print(f"Connecting to IB on {args.tws_host}:{args.tws_port}")
+    logging.info(f"Connecting to IB on {args.tws_host}:{args.tws_port}")
     ib.connect(
         host=args.tws_host,
         port=args.tws_port,
@@ -92,8 +92,7 @@ def main() -> None:
         else Servicer.start(port, thread)
     )
 
-    print(f"Server listening on port {port}")
-
+    logging.info(f"Server listening on port {port}")
     thread.run_forever()
 
 
