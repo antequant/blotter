@@ -95,7 +95,7 @@ class StreamingManager:
             if not bars:
                 return
 
-            if bar_count < self._batch_size:
+            if not timer_fired and bar_count < self._batch_size:
                 logging.debug(
                     f"Skipping upload because bar count {bar_count} is less than batch size {self._batch_size}"
                 )
