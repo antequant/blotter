@@ -54,6 +54,8 @@ def error_handler(error: Exception) -> None:
         raise error
     except IBWarning:
         logging.warning(f"Warning from IB: {error}")
+    except ConnectionError:
+        logging.exception(f"Connection error from IB:")
     except Exception:
         logging.exception(f"Reporting error from IB:")
         error_reporting.Client().report_exception()
