@@ -6,6 +6,7 @@ from typing import (
     Awaitable,
     Callable,
     Dict,
+    Iterable,
     List,
     NamedTuple,
     NoReturn,
@@ -14,9 +15,11 @@ from typing import (
     Union,
 )
 
-from blotter import blotter_pb2, request_helpers
-from ib_insync import IB, Contract, ContractDetails
 import ib_insync.util
+import pandas as pd
+from ib_insync import IB, Contract, ContractDetails, Ticker
+
+from blotter import blotter_pb2, request_helpers
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,20 @@ def serialize_contract(contract: Contract) -> Dict[str, Any]:
 
 def deserialize_contract(d: Dict[str, Any]) -> Contract:
     return Contract(**d)
+
+
+def tickers_to_dataframe(tickers: Iterable[Ticker]) -> pd.DataFrame:
+    original_df = ib_insync.util.df(tickers)
+    df = original_df.apply(
+        lambda row: pd.Series(
+            (row["contract"].conId, row["contract"].localSymbol),
+            index=["symbol", "contractId"],
+        ),
+        axis=1,
+        result_type="expand",
+    )
+
+    return df.join(original_df.drop(columns=["contract"]))
 
 
 _T = TypeVar("_T")
