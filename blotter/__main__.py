@@ -3,12 +3,15 @@ import logging
 import random
 import signal
 from argparse import ArgumentParser
+from datetime import timedelta
 
 import google.cloud.logging
 import ib_insync
+from google.cloud import error_reporting
+
 from blotter.ib_helpers import IBError, IBThread, IBWarning
 from blotter.server import Servicer
-from google.cloud import error_reporting
+from blotter.streaming import StreamingManager
 
 parser = ArgumentParser(
     prog="blotter",
@@ -47,12 +50,27 @@ parser.add_argument(
     help="Automatically resume streaming operations from previous runs, if they were not explicitly cancelled.",
 )
 
+parser.add_argument(
+    "--streaming-batch-size",
+    help="The size of batches to create when streaming, before uploading to BigQuery.",
+    default=StreamingManager.DEFAULT_BATCH_SIZE,
+)
+
+parser.add_argument(
+    "--streaming-batch-timeout",
+    help="The maximum duration (in seconds) to wait when batching data from streaming, before uploading to BigQuery.",
+    type=lambda s: timedelta(seconds=float(s)),
+    default=StreamingManager.DEFAULT_BATCH_LATENCY,
+)
+
 
 def error_handler(error: Exception) -> None:
     try:
         raise error
     except IBWarning:
         logging.warning(f"Warning from IB: {error}")
+    except ConnectionError:
+        logging.exception(f"Connection error from IB:")
     except Exception:
         logging.exception(f"Reporting error from IB:")
         error_reporting.Client().report_exception()
@@ -70,7 +88,7 @@ def main() -> None:
 
     ib = ib_insync.IB()
 
-    print(f"Connecting to IB on {args.tws_host}:{args.tws_port}")
+    logging.info(f"Connecting to IB on {args.tws_host}:{args.tws_port}")
     ib.connect(
         host=args.tws_host,
         port=args.tws_port,
@@ -83,14 +101,17 @@ def main() -> None:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     thread = IBThread(ib, error_handler=error_handler)
-
     port = args.port or random.randint(49152, 65535)
-    s = Servicer.start(port, thread)
-    print(f"Server listening on port {port}")
-    
+    streaming_manager = StreamingManager(
+        batch_size=args.streaming_batch_size,
+        batch_timeout=args.streaming_batch_timeout,
+    )
+
+    s = Servicer.start(port, thread, streaming_manager)
     if args.resume:
         s.resume_streaming()
 
+    logging.info(f"Server listening on port {port}")
     thread.run_forever()
 
 

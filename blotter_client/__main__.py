@@ -5,6 +5,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser, Namespace
 from datetime import datetime
 
 import grpc
+
 from blotter import blotter_pb2, blotter_pb2_grpc
 
 parser = ArgumentParser(
@@ -134,7 +135,7 @@ def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifi
             specifier.securityType = sec_type
             return specifier
 
-    raise RuntimeError(f"Security not specified")
+    parser.error(f"No security type specified")
 
 
 def duration_from_args(args: Namespace) -> blotter_pb2.Duration:
@@ -150,7 +151,7 @@ def duration_from_args(args: Namespace) -> blotter_pb2.Duration:
         if getattr(args, key):
             return blotter_pb2.Duration(count=getattr(args, key), unit=unit)
 
-    raise RuntimeError(f"Duration not specified")
+    parser.error(f"No backfill duration specified")
 
 
 def backfill(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
@@ -168,7 +169,7 @@ def backfill(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
     logging.info(f"LoadHistoricalData: {request}")
 
     for response in stub.LoadHistoricalData(request):
-        print(f"Backfill started with job ID: {response.backfillJobID}")
+        logging.info(f"Backfill started with job ID: {response.backfillJobID}")
 
 
 def start_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
@@ -204,9 +205,7 @@ def main() -> None:
         logging.basicConfig(level=logging.DEBUG if args.verbose >= 2 else logging.INFO)
 
     if not args.command:
-        logging.error("No command provided")
-        parser.print_usage()
-        sys.exit(1)
+        parser.error("No command provided")
 
     # Install SIGINT handler. This is apparently necessary for the process to be interruptible with Ctrl-C on Windows:
     # https://bugs.python.org/issue23057

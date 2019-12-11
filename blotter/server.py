@@ -25,6 +25,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         cls,
         port: int,
         ib_thread: IBThread,
+        streaming_manager: StreamingManager,
         executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(),
     ) -> grpc.Server:
         """
@@ -32,19 +33,21 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         """
 
         s = grpc.server(executor)
-        blotter_pb2_grpc.add_BlotterServicer_to_server(cls(ib_thread), s)
+        blotter_pb2_grpc.add_BlotterServicer_to_server(
+            cls(ib_thread, streaming_manager), s
+        )
         s.add_insecure_port(f"[::]:{port}")
         s.start()
 
         return s
 
-    def __init__(self, ib_thread: IBThread):
+    def __init__(self, ib_thread: IBThread, streaming_manager: StreamingManager):
         """
         Initializes this handler to invoke ib_insync via the given `ib_thread`.
         """
 
         self._ib_thread = ib_thread
-        self._streaming_manager = StreamingManager()
+        self._streaming_manager = streaming_manager
         super().__init__()
 
     def resume_streaming(self) -> None:

@@ -4,11 +4,12 @@ from typing import Tuple
 
 import ib_insync
 import pandas as pd
+from google.cloud import bigquery
+
 from blotter import request_helpers
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.ib_helpers import qualify_contract_specifier
+from blotter.ib_helpers import DataError, qualify_contract_specifier
 from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
-from google.cloud import bigquery
 
 
 async def backfill_bars(
@@ -39,7 +40,7 @@ async def backfill_bars(
     )
 
     if not barList:
-        raise RuntimeError(f"Could not load historical data bars for {con}")
+        raise DataError(f"backfill_bars: Received empty historical data bars for {con}")
 
     earliest_date = barList[0].date
 

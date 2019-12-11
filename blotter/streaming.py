@@ -64,24 +64,48 @@ class StreamingManager:
     _MAX_BIGQUERY_OPERATIONS_PER_DAY = 1000
     """The maximum number of BigQuery operations permitted per table per day."""
 
-    _BIGQUERY_SAFETY_HEADROOM = 0.5
-    """What % of the BigQuery operations allowance to actually use, to leave headroom for other things."""
+    _PERMITTED_OPERATIONS_PER_DAY = _MAX_BIGQUERY_OPERATIONS_PER_DAY * 0.5
+    """How much of the BigQuery operations allowance to actually use, to leave headroom for other things."""
 
     _BAR_SIZE = timedelta(seconds=5)
     """The granularity of real-time data bars, and (while streaming) how quickly they arrive."""
 
-    _MAX_BATCH_LATENCY = timedelta(minutes=10)
-    """The longest length of time we should wait to upload bars. In other words, how old the data is permitted to be."""
+    _MAXIMUM_BARS_PER_DAY = timedelta(days=1) / _BAR_SIZE
+    """The maximum number of real-time data bars that could be reasonably expected in one day."""
+
+    DEFAULT_BATCH_SIZE = math.ceil(
+        _MAXIMUM_BARS_PER_DAY / _PERMITTED_OPERATIONS_PER_DAY
+    )
+    """A reasonable default number of bars to batch together for upload."""
+
+    DEFAULT_BATCH_LATENCY = timedelta(minutes=10)
+    """The default limit on the length of time we should wait to upload bars. In other words, how old the data is permitted to be."""
 
     _FIRESTORE_COLLECTION = "streaming_jobs"
     """The name of the Firestore document collection storing streaming request metadata, so they can be resumed."""
 
     _real_time_bars: Dict[StreamingID, ib_insync.RealTimeBarList]
-    """Active, in-memory streaming data requests."""
+    """Ongoing streaming data requests."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        batch_size: int = DEFAULT_BATCH_SIZE,
+        batch_timeout: timedelta = DEFAULT_BATCH_LATENCY,
+    ) -> None:
+        assert batch_size >= 1, f"Batch size {batch_size} should be a natural number"
+        assert (
+            batch_timeout.total_seconds() >= 1
+        ), f"Batch timeout {batch_timeout} should be at least 1 second"
+
+        if batch_size * self._BAR_SIZE > batch_timeout:
+            logging.warn(
+                f"Batch size {batch_size} would take {batch_size * self._BAR_SIZE} to collect, greater than timeout {batch_timeout}"
+            )
+
         self._real_time_bars = {}
         self._firestore_db = firestore.Client()
+        self._batch_size = batch_size
+        self._batch_timeout = batch_timeout
         super().__init__()
 
     @property
@@ -107,7 +131,9 @@ class StreamingManager:
                 except Exception:
                     logging.exception(f"Failed to resume streaming job {streaming_id}")
 
-            logging.info(f"Resuming streaming for {streaming_job} with ID {streaming_id}")
+            logging.info(
+                f"Resuming streaming for {streaming_job} with ID {streaming_id}"
+            )
             ib_thread.schedule(_resume_job)
             yield streaming_id
 
@@ -132,25 +158,6 @@ class StreamingManager:
 
         self._delete_job_from_firestore(streaming_id)
         return bar_list
-
-    @classmethod
-    @property
-    def _preferred_batch_size(cls) -> int:
-        bars_per_day = timedelta(days=1) / cls._BAR_SIZE
-
-        permitted_ops = (
-            cls._MAX_BIGQUERY_OPERATIONS_PER_DAY * cls._BIGQUERY_SAFETY_HEADROOM
-        )
-
-        batch_size = math.ceil(bars_per_day / permitted_ops)
-        assert batch_size >= 1, "Batch size should be a natural number"
-
-        if batch_size * cls._BAR_SIZE > cls._MAX_BATCH_LATENCY:
-            logging.warn(
-                f"Preferred batch size {batch_size} would take {batch_size * cls._BAR_SIZE} to collect, greater than maximum {cls._MAX_BATCH_LATENCY}"
-            )
-
-        return batch_size
 
     async def start_stream(
         self,
@@ -207,24 +214,21 @@ class StreamingManager:
             if not bars:
                 return
 
-            batch_size = self._preferred_batch_size
-            if bar_count < batch_size:
+            if not timer_fired and bar_count < self._batch_size:
                 logging.debug(
-                    f"Skipping upload because bar count {bar_count} is less than batch size {batch_size}"
+                    f"Skipping upload because bar count {bar_count} is less than batch size {self._batch_size}"
                 )
 
                 if not batch_timer:
                     batch_timer = asyncio.get_running_loop().call_later(
-                        self._MAX_BATCH_LATENCY.total_seconds(),
+                        self._batch_timeout.total_seconds(),
                         _bars_updated,
                         bars,
                         False,
                         True,
                     )
 
-                    logging.debug(
-                        f"Scheduled batch flush after {self._MAX_BATCH_LATENCY}"
-                    )
+                    logging.debug(f"Scheduled batch flush after {self._batch_timeout}")
 
                 return
 
