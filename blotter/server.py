@@ -50,6 +50,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         super().__init__()
 
     def resume_streaming(self) -> None:
+        """
+        Resumes any streaming market data queries that were interrupted on previous runs.
+        """
+
         streaming_ids = list(self._streaming_manager.resume_streaming(self._ib_thread))
         logging.info(f"Resumed streaming IDs {streaming_ids}")
 

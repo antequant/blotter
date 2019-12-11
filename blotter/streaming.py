@@ -25,23 +25,27 @@ StreamingID = NewType("StreamingID", str)
 
 @dataclass(frozen=True)
 class _StreamingJob:
-    serialized_contract: Dict[str, Any]
-    bar_size: int
-    what_to_show: str
-    use_regular_trading_hours: bool
+    """
+    Metadata about a streaming market data job (a.k.a. request) which can be serialized, so that the streaming can be resumed even across server restarts.
+    """
 
-    @classmethod
-    def create_from_bar_list(
-        cls, bar_list: ib_insync.RealTimeBarList
-    ) -> "_StreamingJob":
-        return cls(
-            serialized_contract=serialize_contract(bar_list.contract),
-            bar_size=bar_list.barSize,
-            what_to_show=bar_list.whatToShow,
-            use_regular_trading_hours=bar_list.useRTH,
-        )
+    serialized_contract: Dict[str, Any]
+    """An `ib_insync.Contract` serialized into dictionary form."""
+
+    bar_size: int
+    """Argument to `ib_insync.IB.reqRealTimeBars`."""
+
+    what_to_show: str
+    """Argument to `ib_insync.IB.reqRealTimeBars`."""
+
+    use_regular_trading_hours: bool
+    """Argument to `ib_insync.IB.reqRealTimeBars`."""
 
     def start_request(self, ib_client: ib_insync.IB) -> ib_insync.RealTimeBarList:
+        """
+        Submits this streaming request to the given IB client.
+        """
+
         return ib_client.reqRealTimeBars(
             deserialize_contract(self.serialized_contract),
             barSize=self.bar_size,
@@ -107,6 +111,12 @@ class StreamingManager:
         return self._firestore_db.collection(self._FIRESTORE_COLLECTION)
 
     def resume_streaming(self, ib_thread: IBThread) -> Iterator[StreamingID]:
+        """
+        Attempts to load metadata about previously-running streaming jobs from Firestore, then resume them using the given IB thread.
+
+        Yields the IDs of the jobs that were resumed (though later failures are still possible).
+        """
+
         docs = self._firestore_collection.stream()
         for doc in docs:
             try:
@@ -134,6 +144,12 @@ class StreamingManager:
             yield streaming_id
 
     def _record_job_in_firestore(self, job: _StreamingJob) -> StreamingID:
+        """
+        Records the given streaming job in Firestore, so it can persist across server restarts.
+
+        Returns a unique ID corresponding to the job.
+        """
+
         doc = self._firestore_collection.document()
         logging.debug(f"Recording streaming job with ID {doc.id}: {job}")
 
@@ -141,12 +157,22 @@ class StreamingManager:
         return StreamingID(doc.id)
 
     def _delete_job_from_firestore(self, job_id: StreamingID) -> None:
+        """
+        Deletes a streaming job from Firestore.
+        """
+
         logging.debug(f"Removing streaming job with ID {job_id}")
         self._firestore_collection.document(job_id).delete()
 
     def _cancel_job(
         self, ib_client: ib_insync.IB, streaming_id: StreamingID
     ) -> Optional[ib_insync.RealTimeBarList]:
+        """
+        Cancels a streaming job, removing its metadata from Firestore (so it will no longer be resumed) and cancelling streaming market data from IB.
+
+        Returns the final `RealTimeBarList` associated with this ID, if it could be found.
+        """
+
         logging.debug(f"_real_time_bars before cancelling: {self._real_time_bars}")
         bar_list = self._real_time_bars.pop(streaming_id, None)
         if bar_list is not None:
@@ -191,6 +217,10 @@ class StreamingManager:
         streaming_job: _StreamingJob,
         streaming_id: StreamingID,
     ) -> None:
+        """
+        Starts streaming market data for the described job, which should have already been recorded for later resumption.
+        """
+
         batch_timer: Optional[asyncio.TimerHandle] = None
 
         def _bars_updated(
