@@ -62,9 +62,17 @@ parser.add_argument(
 
 subparsers = parser.add_subparsers(dest="command", help="What to do")
 
-ping_parser = subparsers.add_parser("ping", help="Check that the server is online")
+ping_parser = subparsers.add_parser(
+    "ping",
+    help="Check that the server is online",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
 
-backfill_parser = subparsers.add_parser("backfill", help="Backfill securities data")
+backfill_parser = subparsers.add_parser(
+    "backfill",
+    help="Backfill securities data",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
 
 backfill_parser.add_argument(
     "--bar-size",
@@ -102,7 +110,12 @@ duration_group.add_argument(
     "--years", type=int, help="Number of years to backfill data for",
 )
 
-start_parser = subparsers.add_parser("start", help="Start streaming securities data")
+start_parser = subparsers.add_parser(
+    "start",
+    help="Start streaming securities data",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
+
 start_parser.add_argument(
     "--bar-source",
     help="Which quotes or data to fetch per bar",
@@ -110,7 +123,12 @@ start_parser.add_argument(
     default="TRADES",
 )
 
-stop_parser = subparsers.add_parser("stop", help="Stop streaming securities data")
+stop_parser = subparsers.add_parser(
+    "stop",
+    help="Stop streaming securities data",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
+
 stop_parser.add_argument("request_id", help="The streaming request to cancel")
 
 
