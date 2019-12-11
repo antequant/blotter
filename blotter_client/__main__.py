@@ -88,6 +88,13 @@ backfill_parser.add_argument(
     default="TRADES",
 )
 
+backfill_parser.add_argument(
+    "--until",
+    type=int,
+    help="Backfill up until this POSIX UTC timestamp",
+    default=int(datetime.utcnow().timestamp()),
+)
+
 duration_group = backfill_parser.add_mutually_exclusive_group(required=True)
 
 duration_group.add_argument(
@@ -175,8 +182,7 @@ def duration_from_args(args: Namespace) -> blotter_pb2.Duration:
 def backfill(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
     request = blotter_pb2.LoadHistoricalDataRequest(
         contractSpecifier=contract_specifier_from_args(args),
-        # TODO: Make this a command-line arg too
-        endTimestampUTC=int(datetime.utcnow().timestamp()),
+        endTimestampUTC=args.until,
         duration=duration_from_args(args),
         barSize=blotter_pb2.LoadHistoricalDataRequest.BarSize.Value(args.bar_size),
         barSource=blotter_pb2.LoadHistoricalDataRequest.BarSource.Value(
