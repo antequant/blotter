@@ -48,6 +48,7 @@ parser.add_argument(
 parser.add_argument(
     "--resume",
     help="Automatically resume streaming operations from previous runs, if they were not explicitly cancelled.",
+    action="store_true",
 )
 
 parser.add_argument(
