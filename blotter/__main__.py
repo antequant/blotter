@@ -46,6 +46,12 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--resume",
+    help="Automatically resume streaming operations from previous runs, if they were not explicitly cancelled.",
+    action="store_true",
+)
+
+parser.add_argument(
     "--streaming-batch-size",
     help="The size of batches to create when streaming, before uploading to BigQuery.",
     default=StreamingManager.DEFAULT_BATCH_SIZE,
@@ -98,10 +104,13 @@ def main() -> None:
     thread = IBThread(ib, error_handler=error_handler)
     port = args.port or random.randint(49152, 65535)
     streaming_manager = StreamingManager(
-        batch_size=args.streaming_batch_size, batch_timeout=args.streaming_batch_timeout
+        batch_size=args.streaming_batch_size,
+        batch_timeout=args.streaming_batch_timeout,
     )
 
-    s = Servicer.start(port, thread, streaming_manager)
+    (servicer, server) = Servicer.start(port, thread, streaming_manager)
+    if args.resume:
+        servicer.resume_streaming()
 
     logging.info(f"Server listening on port {port}")
     thread.run_forever()

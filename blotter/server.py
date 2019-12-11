@@ -27,19 +27,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         ib_thread: IBThread,
         streaming_manager: StreamingManager,
         executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(),
-    ) -> grpc.Server:
+    ) -> Tuple["Servicer", grpc.Server]:
         """
         Instantiates a server, binds it to the given port and begins accepting requests on `executor`.
         """
 
         s = grpc.server(executor)
-        blotter_pb2_grpc.add_BlotterServicer_to_server(
-            cls(ib_thread, streaming_manager), s
-        )
+        servicer = cls(ib_thread, streaming_manager)
+        blotter_pb2_grpc.add_BlotterServicer_to_server(servicer, s)
         s.add_insecure_port(f"[::]:{port}")
         s.start()
 
-        return s
+        return (servicer, s)
 
     def __init__(self, ib_thread: IBThread, streaming_manager: StreamingManager):
         """
@@ -49,6 +48,14 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         self._ib_thread = ib_thread
         self._streaming_manager = streaming_manager
         super().__init__()
+
+    def resume_streaming(self) -> None:
+        """
+        Resumes any streaming market data queries that were interrupted on previous runs.
+        """
+
+        streaming_ids = list(self._streaming_manager.resume_streaming(self._ib_thread))
+        logging.info(f"Resumed streaming IDs {streaming_ids}")
 
     def _run_in_ib_thread(
         self, fn: Callable[[ib_insync.IB], Awaitable[_T]]

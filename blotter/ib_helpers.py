@@ -2,8 +2,10 @@ import asyncio
 import concurrent.futures
 from dataclasses import dataclass
 from typing import (
+    Any,
     Awaitable,
     Callable,
+    Dict,
     List,
     NamedTuple,
     NoReturn,
@@ -49,6 +51,14 @@ async def qualify_contract_specifier(
         raise AmbiguousContractError(specifier=specifier, possible_contracts=details)
 
     return contract
+
+
+def serialize_contract(contract: Contract) -> Dict[str, Any]:
+    return {key: getattr(contract, key) for key in Contract.__slots__}
+
+
+def deserialize_contract(d: Dict[str, Any]) -> Contract:
+    return Contract(**d)
 
 
 _T = TypeVar("_T")
