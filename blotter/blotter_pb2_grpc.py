@@ -35,6 +35,11 @@ class BlotterStub(object):
         request_serializer=blotter_dot_blotter__pb2.CancelRealTimeDataRequest.SerializeToString,
         response_deserializer=blotter_dot_blotter__pb2.CancelRealTimeDataResponse.FromString,
         )
+    self.SnapshotOptionChain = channel.unary_unary(
+        '/blotter.Blotter/SnapshotOptionChain',
+        request_serializer=blotter_dot_blotter__pb2.SnapshotOptionChainRequest.SerializeToString,
+        response_deserializer=blotter_dot_blotter__pb2.SnapshotOptionChainResponse.FromString,
+        )
 
 
 class BlotterServicer(object):
@@ -76,6 +81,13 @@ class BlotterServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def SnapshotOptionChain(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_BlotterServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -98,6 +110,11 @@ def add_BlotterServicer_to_server(servicer, server):
           servicer.CancelRealTimeData,
           request_deserializer=blotter_dot_blotter__pb2.CancelRealTimeDataRequest.FromString,
           response_serializer=blotter_dot_blotter__pb2.CancelRealTimeDataResponse.SerializeToString,
+      ),
+      'SnapshotOptionChain': grpc.unary_unary_rpc_method_handler(
+          servicer.SnapshotOptionChain,
+          request_deserializer=blotter_dot_blotter__pb2.SnapshotOptionChainRequest.FromString,
+          response_serializer=blotter_dot_blotter__pb2.SnapshotOptionChainResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(
