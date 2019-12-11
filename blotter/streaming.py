@@ -121,6 +121,7 @@ class StreamingManager:
                 logging.exception(
                     f"Failed to deserialize streaming job from document {doc}"
                 )
+                error_reporting.Client().report_exception()
                 continue
 
             streaming_id = StreamingID(doc.id)
@@ -130,6 +131,7 @@ class StreamingManager:
                     await self._start_job(ib_client, streaming_job, streaming_id)
                 except Exception:
                     logging.exception(f"Failed to resume streaming job {streaming_id}")
+                    error_reporting.Client().report_exception()
 
             logging.info(
                 f"Resuming streaming for {streaming_job} with ID {streaming_id}"
