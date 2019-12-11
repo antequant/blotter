@@ -27,19 +27,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         ib_thread: IBThread,
         streaming_manager: StreamingManager,
         executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(),
-    ) -> grpc.Server:
+    ) -> Tuple["Servicer", grpc.Server]:
         """
         Instantiates a server, binds it to the given port and begins accepting requests on `executor`.
         """
 
         s = grpc.server(executor)
-        blotter_pb2_grpc.add_BlotterServicer_to_server(
-            cls(ib_thread, streaming_manager), s
-        )
+        servicer = cls(ib_thread, streaming_manager)
+        blotter_pb2_grpc.add_BlotterServicer_to_server(servicer, s)
         s.add_insecure_port(f"[::]:{port}")
         s.start()
 
-        return s
+        return (servicer, s)
 
     def __init__(self, ib_thread: IBThread, streaming_manager: StreamingManager):
         """

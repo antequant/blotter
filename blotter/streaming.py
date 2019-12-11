@@ -4,14 +4,20 @@ import logging
 import math
 from dataclasses import dataclass
 from datetime import timedelta
-from typing import Dict, Iterator, NewType, Optional
+from typing import Any, Dict, Iterator, NewType, Optional
 
 import ib_insync
 import pandas as pd
-from blotter.blotter_pb2 import ContractSpecifier
-from blotter.ib_helpers import IBThread, qualify_contract_specifier
-from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
 from google.cloud import error_reporting, firestore
+
+from blotter.blotter_pb2 import ContractSpecifier
+from blotter.ib_helpers import (
+    IBThread,
+    deserialize_contract,
+    qualify_contract_specifier,
+    serialize_contract,
+)
+from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
 
 StreamingID = NewType("StreamingID", str)
 """A unique ID for ongoing market data streaming."""
@@ -19,13 +25,7 @@ StreamingID = NewType("StreamingID", str)
 
 @dataclass(frozen=True)
 class _StreamingJob:
-    local_symbol: str
-
-    contract_id: int
-
-    primary_exchange: str
-    """Needed to disambiguate SMART contract IDs."""
-
+    serialized_contract: Dict[str, Any]
     bar_size: int
     what_to_show: str
     use_regular_trading_hours: bool
@@ -35,9 +35,7 @@ class _StreamingJob:
         cls, bar_list: ib_insync.RealTimeBarList
     ) -> "_StreamingJob":
         return cls(
-            local_symbol=bar_list.contract.localSymbol,
-            contract_id=bar_list.contract.conId,
-            primary_exchange=bar_list.contract.primaryExchange,
+            serialized_contract=serialize_contract(bar_list.contract),
             bar_size=bar_list.barSize,
             what_to_show=bar_list.whatToShow,
             use_regular_trading_hours=bar_list.useRTH,
@@ -45,11 +43,7 @@ class _StreamingJob:
 
     def start_request(self, ib_client: ib_insync.IB) -> ib_insync.RealTimeBarList:
         return ib_client.reqRealTimeBars(
-            ib_insync.Contract(
-                conId=self.contract_id,
-                primaryExchange=self.primary_exchange,
-                localSymbol=self.local_symbol,
-            ),
+            deserialize_contract(self.serialized_contract),
             barSize=self.bar_size,
             whatToShow=self.what_to_show,
             useRTH=self.use_regular_trading_hours,
@@ -179,9 +173,7 @@ class StreamingManager:
         contract = await qualify_contract_specifier(ib_client, contract_specifier)
 
         streaming_job = _StreamingJob(
-            contract_id=contract.conId,
-            primary_exchange=contract.primaryExchange,
-            local_symbol=contract.localSymbol,
+            serialized_contract=serialize_contract(contract),
             bar_size=5,
             what_to_show=bar_source,
             use_regular_trading_hours=regular_trading_hours_only,

@@ -108,9 +108,9 @@ def main() -> None:
         batch_timeout=args.streaming_batch_timeout,
     )
 
-    s = Servicer.start(port, thread, streaming_manager)
+    (servicer, server) = Servicer.start(port, thread, streaming_manager)
     if args.resume:
-        s.resume_streaming()
+        servicer.resume_streaming()
 
     logging.info(f"Server listening on port {port}")
     thread.run_forever()
