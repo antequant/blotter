@@ -7,9 +7,13 @@ from blotter.blotter_pb2 import ContractSpecifier
 from blotter.ib_helpers import qualify_contract_specifier
 
 
-async def fetch_option_chains(
+async def look_up_options(
     ib_client: ib_insync.IB, contract_specifier: ContractSpecifier
-) -> List[ib_insync.Ticker]:
+) -> List[ib_insync.Contract]:
+    """
+    Looks up all valid (non-expired) options contracts for the given contract specifier.
+    """
+
     underlying = await qualify_contract_specifier(ib_client, contract_specifier)
     option_chains = await ib_client.reqSecDefOptParamsAsync(
         underlyingSymbol=underlying.symbol,
@@ -43,12 +47,4 @@ async def fetch_option_chains(
         f"Qualified {len(qualified_contracts)} options contracts for {contract_specifier}"
     )
 
-    tickers = await ib_client.reqTickersAsync(
-        *qualified_contracts, regulatorySnapshot=False
-    )
-
-    logging.debug(
-        f"Fetched {len(tickers)} tickers for options contraints for {contract_specifier}"
-    )
-
-    return tickers
+    return qualified_contracts
