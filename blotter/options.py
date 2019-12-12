@@ -70,21 +70,21 @@ async def _load_tickers_into_dataframe(
     df = pd.DataFrame.from_records(
         (
             {
-                TickersTableColumn.SYMBOL: t.contract.localSymbol,
-                TickersTableColumn.CONTRACT_ID: t.contract.conId,
-                TickersTableColumn.TIMESTAMP: t.time,
-                TickersTableColumn.OPEN: t.open,
-                TickersTableColumn.HIGH: t.high,
-                TickersTableColumn.LOW: t.low,
-                TickersTableColumn.CLOSE: t.close,
-                TickersTableColumn.VOLUME: t.volume,
-                TickersTableColumn.AVERAGE_PRICE: t.vwap,
-                TickersTableColumn.BID: t.bid,
-                TickersTableColumn.BID_SIZE: t.bidSize,
-                TickersTableColumn.ASK: t.ask,
-                TickersTableColumn.ASK_SIZE: t.askSize,
-                TickersTableColumn.LAST: t.last,
-                TickersTableColumn.LAST_SIZE: t.lastSize,
+                TickersTableColumn.SYMBOL.value: t.contract.localSymbol,
+                TickersTableColumn.CONTRACT_ID.value: t.contract.conId,
+                TickersTableColumn.TIMESTAMP.value: t.time,
+                TickersTableColumn.OPEN.value: t.open,
+                TickersTableColumn.HIGH.value: t.high,
+                TickersTableColumn.LOW.value: t.low,
+                TickersTableColumn.CLOSE.value: t.close,
+                TickersTableColumn.VOLUME.value: t.volume,
+                TickersTableColumn.AVERAGE_PRICE.value: t.vwap,
+                TickersTableColumn.BID.value: t.bid,
+                TickersTableColumn.BID_SIZE.value: t.bidSize,
+                TickersTableColumn.ASK.value: t.ask,
+                TickersTableColumn.ASK_SIZE.value: t.askSize,
+                TickersTableColumn.LAST.value: t.last,
+                TickersTableColumn.LAST_SIZE.value: t.lastSize,
             }
             for t in tickers
         )
