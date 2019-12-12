@@ -21,6 +21,8 @@ class TableColumn(Enum):
     CLOSE = "close"
     VOLUME = "volume"
     AVERAGE_PRICE = "average"
+
+    # These are used only for historical and real-time data tables (not snapshots).
     BAR_COUNT = "bar_count"
     BAR_SOURCE = "bar_source"
 

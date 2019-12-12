@@ -1,25 +1,17 @@
 import asyncio
 import concurrent.futures
+import logging
 from dataclasses import dataclass
 from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    NamedTuple,
-    NoReturn,
-    Optional,
-    TypeVar,
-    Union,
-)
+    Any, Awaitable, Callable, Dict, Iterable, List, NamedTuple, NoReturn,
+    Optional, TypeVar, Union)
 
 import ib_insync.util
 import pandas as pd
 from ib_insync import IB, Contract, ContractDetails, Ticker
 
 from blotter import blotter_pb2, request_helpers
+from blotter.upload import TableColumn
 
 
 @dataclass(frozen=True)
@@ -80,6 +72,33 @@ def tickers_to_dataframe(tickers: Iterable[Ticker]) -> pd.DataFrame:
     )
 
     return df.join(original_df.drop(columns=["contract"]))
+
+async def load_tickers_into_dataframe(
+    ib_client: ib_insync.IB, contracts: Iterable[ib_insync.Contract]
+) -> pd.DataFrame:
+    """
+    Requests snapshot tickers for all of the given contracts.
+
+    Returns a DataFrame with all tickers as rows.
+    """
+
+    tickers = await ib_client.reqTickersAsync(*contracts, regulatorySnapshot=False)
+    logging.debug(f"Fetched {len(tickers)} tickers")
+
+    df = tickers_to_dataframe(tickers).rename(
+        columns={
+            "time": TableColumn.TIMESTAMP,
+            "open": TableColumn.OPEN,
+            "high": TableColumn.HIGH,
+            "low": TableColumn.LOW,
+            "close": TableColumn.CLOSE,
+            "volume": TableColumn.VOLUME,
+            "vwap": TableColumn.AVERAGE_PRICE,
+        }
+    )
+
+    logging.debug(f"Tickers DataFrame: {df}")
+    return df
 
 
 _T = TypeVar("_T")
