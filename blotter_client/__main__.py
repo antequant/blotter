@@ -138,6 +138,12 @@ stop_parser = subparsers.add_parser(
 
 stop_parser.add_argument("request_id", help="The streaming request to cancel")
 
+snapshot_options_parser = subparsers.add_parser(
+    "snapshot-options",
+    help="Snapshot the options chain for the given stock or future",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
+
 
 def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifier:
     type_mapping = {
@@ -223,6 +229,14 @@ def ping(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
     print("Ping!")
 
 
+def snapshot_options(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
+    request = blotter_pb2.SnapshotOptionChainRequest(contractSpecifier=contract_specifier_from_args(args))
+    logging.info(f"SnapshotOptionChain: {request}")
+
+    response = stub.SnapshotOptionChain(request)
+    logging.info(f"Importing option chain with job ID: {response.importJobID}")
+
+
 def main() -> None:
     args = parser.parse_args()
     if args.verbose:
@@ -246,6 +260,7 @@ def main() -> None:
         "start": start_streaming,
         "stop": stop_streaming,
         "ping": ping,
+        "snapshot-options": snapshot_options,
     }
 
     commands[args.command](stub, args)
