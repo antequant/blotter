@@ -11,13 +11,10 @@ import pandas as pd
 from google.cloud import error_reporting, firestore
 
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.ib_helpers import (
-    IBThread,
-    deserialize_contract,
-    qualify_contract_specifier,
-    serialize_contract,
-)
-from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
+from blotter.ib_helpers import (IBThread, deserialize_contract,
+                                qualify_contract_specifier, serialize_contract)
+from blotter.upload import (BarsTableColumn, TableColumn,
+                            table_name_for_contract, upload_dataframe)
 
 StreamingID = NewType("StreamingID", str)
 """A unique ID for ongoing market data streaming."""
@@ -278,11 +275,11 @@ class StreamingManager:
                         TableColumn.CLOSE.value: df["close"],
                         TableColumn.VOLUME.value: df["volume"],
                         TableColumn.AVERAGE_PRICE.value: df["wap"],
-                        TableColumn.BAR_COUNT.value: df["count"],
+                        BarsTableColumn.BAR_COUNT.value: df["count"],
                     }
                 )
 
-                df[TableColumn.BAR_SOURCE.value] = bars.whatToShow
+                df[BarsTableColumn.BAR_SOURCE.value] = bars.whatToShow
 
                 logging.debug(df)
                 job = upload_dataframe(table_name_for_contract(bars.contract), df)

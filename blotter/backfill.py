@@ -9,7 +9,12 @@ from google.cloud import bigquery
 from blotter import request_helpers
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.ib_helpers import DataError, qualify_contract_specifier
-from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
+from blotter.upload import (
+    BarsTableColumn,
+    TableColumn,
+    table_name_for_contract,
+    upload_dataframe,
+)
 
 
 async def backfill_bars(
@@ -57,11 +62,11 @@ async def backfill_bars(
             TableColumn.CLOSE.value: df["close"],
             TableColumn.VOLUME.value: df["volume"],
             TableColumn.AVERAGE_PRICE.value: df["average"],
-            TableColumn.BAR_COUNT.value: df["barCount"],
+            BarsTableColumn.BAR_COUNT.value: df["barCount"],
         }
     )
 
-    df[TableColumn.BAR_SOURCE.value] = barList.whatToShow
+    df[BarsTableColumn.BAR_SOURCE.value] = barList.whatToShow
 
     logging.debug(df)
     job = upload_dataframe(table_name_for_contract(con), df)

@@ -22,7 +22,9 @@ class TableColumn(Enum):
     VOLUME = "volume"
     AVERAGE_PRICE = "average"
 
-    # These are used only for historical and real-time data tables (not snapshots).
+
+@unique
+class BarsTableColumn(TableColumn):
     BAR_COUNT = "bar_count"
     BAR_SOURCE = "bar_source"
 
