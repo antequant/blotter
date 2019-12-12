@@ -69,7 +69,7 @@ def tickers_to_dataframe(tickers: Iterable[Ticker]) -> pd.DataFrame:
     df = original_df.apply(
         lambda row: pd.Series(
             (row["contract"].conId, row["contract"].localSymbol),
-            index=["symbol", "contractId"],
+            index=["contractId", "symbol"],
         ),
         axis=1,
         result_type="expand",
