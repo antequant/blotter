@@ -8,7 +8,6 @@ from google.cloud import bigquery
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.ib_helpers import qualify_contract_specifier
 from blotter.upload import (
-    TableColumn,
     TickersTableColumn,
     table_name_for_contract,
     upload_dataframe,
@@ -73,13 +72,13 @@ async def _load_tickers_into_dataframe(
             {
                 TickersTableColumn.SYMBOL: t.contract.localSymbol,
                 TickersTableColumn.CONTRACT_ID: t.contract.conId,
-                TableColumn.TIMESTAMP: t.time,
-                TableColumn.OPEN: t.open,
-                TableColumn.HIGH: t.high,
-                TableColumn.LOW: t.low,
-                TableColumn.CLOSE: t.close,
-                TableColumn.VOLUME: t.volume,
-                TableColumn.AVERAGE_PRICE: t.vwap,
+                TickersTableColumn.TIMESTAMP: t.time,
+                TickersTableColumn.OPEN: t.open,
+                TickersTableColumn.HIGH: t.high,
+                TickersTableColumn.LOW: t.low,
+                TickersTableColumn.CLOSE: t.close,
+                TickersTableColumn.VOLUME: t.volume,
+                TickersTableColumn.AVERAGE_PRICE: t.vwap,
                 TickersTableColumn.BID: t.bid,
                 TickersTableColumn.BID_SIZE: t.bidSize,
                 TickersTableColumn.ASK: t.ask,

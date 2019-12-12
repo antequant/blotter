@@ -11,7 +11,6 @@ from blotter.blotter_pb2 import ContractSpecifier
 from blotter.ib_helpers import DataError, qualify_contract_specifier
 from blotter.upload import (
     BarsTableColumn,
-    TableColumn,
     table_name_for_contract,
     upload_dataframe,
 )
@@ -55,13 +54,13 @@ async def backfill_bars(
     # See fields on BarData.
     df = pd.DataFrame(
         data={
-            TableColumn.TIMESTAMP.value: df["date"],
-            TableColumn.OPEN.value: df["open"],
-            TableColumn.HIGH.value: df["high"],
-            TableColumn.LOW.value: df["low"],
-            TableColumn.CLOSE.value: df["close"],
-            TableColumn.VOLUME.value: df["volume"],
-            TableColumn.AVERAGE_PRICE.value: df["average"],
+            BarsTableColumn.TIMESTAMP.value: df["date"],
+            BarsTableColumn.OPEN.value: df["open"],
+            BarsTableColumn.HIGH.value: df["high"],
+            BarsTableColumn.LOW.value: df["low"],
+            BarsTableColumn.CLOSE.value: df["close"],
+            BarsTableColumn.VOLUME.value: df["volume"],
+            BarsTableColumn.AVERAGE_PRICE.value: df["average"],
             BarsTableColumn.BAR_COUNT.value: df["barCount"],
         }
     )

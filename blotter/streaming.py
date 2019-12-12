@@ -13,7 +13,7 @@ from google.cloud import error_reporting, firestore
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.ib_helpers import (IBThread, deserialize_contract,
                                 qualify_contract_specifier, serialize_contract)
-from blotter.upload import (BarsTableColumn, TableColumn,
+from blotter.upload import (BarsTableColumn,
                             table_name_for_contract, upload_dataframe)
 
 StreamingID = NewType("StreamingID", str)
@@ -268,13 +268,13 @@ class StreamingManager:
                 # See fields on RealTimeBar.
                 df = pd.DataFrame(
                     data={
-                        TableColumn.TIMESTAMP.value: df["time"],
-                        TableColumn.OPEN.value: df["open_"],
-                        TableColumn.HIGH.value: df["high"],
-                        TableColumn.LOW.value: df["low"],
-                        TableColumn.CLOSE.value: df["close"],
-                        TableColumn.VOLUME.value: df["volume"],
-                        TableColumn.AVERAGE_PRICE.value: df["wap"],
+                        BarsTableColumn.TIMESTAMP.value: df["time"],
+                        BarsTableColumn.OPEN.value: df["open_"],
+                        BarsTableColumn.HIGH.value: df["high"],
+                        BarsTableColumn.LOW.value: df["low"],
+                        BarsTableColumn.CLOSE.value: df["close"],
+                        BarsTableColumn.VOLUME.value: df["volume"],
+                        BarsTableColumn.AVERAGE_PRICE.value: df["wap"],
                         BarsTableColumn.BAR_COUNT.value: df["count"],
                     }
                 )
