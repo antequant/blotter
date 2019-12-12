@@ -187,6 +187,11 @@ class IBThread:
         def _ib_error_event_handler(
             reqId: int, errorCode: int, errorString: str, contract: Optional[Contract]
         ) -> None:
+            if errorCode == 200:
+                # "No security definition has been found" error.
+                # This will occur a lot if we're speculatively qualifying contracts, so just filter it out.
+                return
+
             is_warning = (errorCode >= 1100 and errorCode < 2000) or (
                 errorCode >= 2100 and errorCode < 3000
             )
