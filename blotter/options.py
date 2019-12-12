@@ -6,8 +6,13 @@ import pandas as pd
 from google.cloud import bigquery
 
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.ib_helpers import qualify_contract_specifier, load_tickers_into_dataframe
-from blotter.upload import TableColumn, table_name_for_contract, upload_dataframe
+from blotter.ib_helpers import qualify_contract_specifier
+from blotter.upload import (
+    TableColumn,
+    TickersTableColumn,
+    table_name_for_contract,
+    upload_dataframe,
+)
 
 
 async def _look_up_options(
@@ -51,6 +56,44 @@ async def _look_up_options(
     return qualified_contracts
 
 
+async def _load_tickers_into_dataframe(
+    ib_client: ib_insync.IB, contracts: Iterable[ib_insync.Contract]
+) -> pd.DataFrame:
+    """
+    Requests snapshot tickers for all of the given contracts.
+
+    Returns a DataFrame with all tickers as rows.
+    """
+
+    tickers = await ib_client.reqTickersAsync(*contracts, regulatorySnapshot=False)
+    logging.info(f"Fetched {len(tickers)} tickers")
+
+    df = pd.DataFrame.from_records(
+        (
+            {
+                TickersTableColumn.SYMBOL: t.contract.localSymbol,
+                TickersTableColumn.CONTRACT_ID: t.contract.conId,
+                TableColumn.TIMESTAMP: t.time,
+                TableColumn.OPEN: t.open,
+                TableColumn.HIGH: t.high,
+                TableColumn.LOW: t.low,
+                TableColumn.CLOSE: t.close,
+                TableColumn.VOLUME: t.volume,
+                TableColumn.AVERAGE_PRICE: t.vwap,
+                TickersTableColumn.BID: t.bid,
+                TickersTableColumn.BID_SIZE: t.bidSize,
+                TickersTableColumn.ASK: t.ask,
+                TickersTableColumn.ASK_SIZE: t.askSize,
+                TickersTableColumn.LAST: t.last,
+                TickersTableColumn.LAST_SIZE: t.lastSize,
+            }
+            for t in tickers
+        )
+    )
+
+    logging.debug(f"Tickers DataFrame: {df}")
+    return df
+
 
 async def snapshot_options(
     ib_client: ib_insync.IB, underlying_specifier: ContractSpecifier,
@@ -63,7 +106,7 @@ async def snapshot_options(
 
     underlying = await qualify_contract_specifier(ib_client, underlying_specifier)
     contracts = await _look_up_options(ib_client, underlying)
-    df = await load_tickers_into_dataframe(ib_client, contracts)
+    df = await _load_tickers_into_dataframe(ib_client, contracts)
 
     table_name = f"{table_name_for_contract(underlying)}_options"
     return upload_dataframe(table_name, df)

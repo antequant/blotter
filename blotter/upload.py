@@ -29,6 +29,18 @@ class BarsTableColumn(TableColumn):
     BAR_SOURCE = "bar_source"
 
 
+@unique
+class TickersTableColumn(TableColumn):
+    CONTRACT_ID = "contract_id"
+    SYMBOL = "symbol"
+    BID = "bid"
+    BID_SIZE = "bid_size"
+    ASK = "ask"
+    ASK_SIZE = "ask_size"
+    LAST = "last"
+    LAST_SIZE = "last_size"
+
+
 def upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     """
     Enqueues an asynchronous job to upload the given DataFrame to the named table.

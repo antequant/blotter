@@ -3,15 +3,24 @@ import concurrent.futures
 import logging
 from dataclasses import dataclass
 from typing import (
-    Any, Awaitable, Callable, Dict, Iterable, List, NamedTuple, NoReturn,
-    Optional, TypeVar, Union)
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    NamedTuple,
+    NoReturn,
+    Optional,
+    TypeVar,
+    Union,
+)
 
 import ib_insync.util
 import pandas as pd
 from ib_insync import IB, Contract, ContractDetails, Ticker
 
 from blotter import blotter_pb2, request_helpers
-from blotter.upload import TableColumn
 
 
 @dataclass(frozen=True)
@@ -54,51 +63,6 @@ def serialize_contract(contract: Contract) -> Dict[str, Any]:
 
 def deserialize_contract(d: Dict[str, Any]) -> Contract:
     return Contract(**d)
-
-
-def tickers_to_dataframe(tickers: Iterable[Ticker]) -> pd.DataFrame:
-    """
-    Transforms `ib_insync.Ticker` fields into a pandas DataFrame. The `Ticker.contract` object is unpacked into multiple columns that help uniquely (and human-readably) identify the contract.
-    """
-
-    original_df = ib_insync.util.df(tickers)
-    df = original_df.apply(
-        lambda row: pd.Series(
-            (row["contract"].conId, row["contract"].localSymbol),
-            index=["contractId", "symbol"],
-        ),
-        axis=1,
-        result_type="expand",
-    )
-
-    return df.join(original_df.drop(columns=["contract"]))
-
-async def load_tickers_into_dataframe(
-    ib_client: ib_insync.IB, contracts: Iterable[ib_insync.Contract]
-) -> pd.DataFrame:
-    """
-    Requests snapshot tickers for all of the given contracts.
-
-    Returns a DataFrame with all tickers as rows.
-    """
-
-    tickers = await ib_client.reqTickersAsync(*contracts, regulatorySnapshot=False)
-    logging.debug(f"Fetched {len(tickers)} tickers")
-
-    df = tickers_to_dataframe(tickers).rename(
-        columns={
-            "time": TableColumn.TIMESTAMP,
-            "open": TableColumn.OPEN,
-            "high": TableColumn.HIGH,
-            "low": TableColumn.LOW,
-            "close": TableColumn.CLOSE,
-            "volume": TableColumn.VOLUME,
-            "vwap": TableColumn.AVERAGE_PRICE,
-        }
-    )
-
-    logging.debug(f"Tickers DataFrame: {df}")
-    return df
 
 
 _T = TypeVar("_T")
