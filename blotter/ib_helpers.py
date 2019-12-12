@@ -65,6 +65,10 @@ def deserialize_contract(d: Dict[str, Any]) -> Contract:
 
 
 def tickers_to_dataframe(tickers: Iterable[Ticker]) -> pd.DataFrame:
+    """
+    Transforms `ib_insync.Ticker` fields into a pandas DataFrame. The `Ticker.contract` object is unpacked into multiple columns that help uniquely (and human-readably) identify the contract.
+    """
+
     original_df = ib_insync.util.df(tickers)
     df = original_df.apply(
         lambda row: pd.Series(
