@@ -2,8 +2,11 @@ import asyncio
 import logging
 import random
 import signal
+import sys
 from argparse import ArgumentParser
 from datetime import timedelta
+from types import TracebackType
+from typing import Type
 
 import google.cloud.logging
 import ib_insync
@@ -69,6 +72,18 @@ parser.add_argument(
 )
 
 
+def install_except_hook(error_handler: ErrorHandlerConfiguration) -> None:
+    mgr = error_handler(f"Uncaught exception:")
+    mgr.__enter__()
+
+    def _hook(
+        type_: Type[BaseException], value: BaseException, traceback: TracebackType,
+    ) -> None:
+        mgr.__exit__(type_, value, traceback)
+
+    sys.excepthook = _hook
+
+
 def main() -> None:
     args = parser.parse_args()
 
@@ -78,6 +93,8 @@ def main() -> None:
 
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG if args.verbose >= 2 else logging.INFO)
+
+    error_handler = ErrorHandlerConfiguration(report_to_gcloud=args.report_errors)
 
     ib = ib_insync.IB()
 
@@ -92,8 +109,6 @@ def main() -> None:
     # Install SIGINT handler. This is apparently necessary for the process to be interruptible with Ctrl-C on Windows:
     # https://bugs.python.org/issue23057
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-    error_handler = ErrorHandlerConfiguration(report_to_gcloud=args.report_errors)
 
     def handle_ib_thread_error(error: Exception) -> None:
         with error_handler(f"Reporting error from IB:"):
