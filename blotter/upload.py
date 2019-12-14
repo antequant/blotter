@@ -7,9 +7,9 @@ from google.cloud import bigquery, error_reporting
 
 
 @unique
-class TableColumn(Enum):
+class BarsTableColumn(Enum):
     """
-    Specifies the known/desired columns for BigQuery tables, so they can be standardized even when the data is merged from different sources.
+    Specifies the known/desired columns for BigQuery tables of bar data, so they can be standardized even when the data is merged from different sources.
 
     Other columns are still permitted, but it is recommended they have a prefix like `unknown_` or `extra_` to indicate that they will not always be populated.
     """
@@ -25,6 +25,29 @@ class TableColumn(Enum):
     BAR_SOURCE = "bar_source"
 
 
+@unique
+class TickersTableColumn(Enum):
+    """
+    Specifies the known/desired columns for BigQuery tables of ticker data, so they can be standardized even when the data is merged from different sources.
+
+    Other columns are still permitted, but it is recommended they have a prefix like `unknown_` or `extra_` to indicate that they will not always be populated.
+    """
+
+    CONTRACT_ID = "contract_id"
+    SYMBOL = "symbol"
+    TIMESTAMP = "timestamp"
+    HIGH = "high"
+    LOW = "low"
+    CLOSE = "close"
+    VOLUME = "volume"
+    BID = "bid"
+    BID_SIZE = "bid_size"
+    ASK = "ask"
+    ASK_SIZE = "ask_size"
+    LAST = "last"
+    LAST_SIZE = "last_size"
+
+
 def upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     """
     Enqueues an asynchronous job to upload the given DataFrame to the named table.
@@ -37,9 +60,12 @@ def upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
 
     dataset_ref = client.dataset(dataset_id)
     table_ref = dataset_ref.table(table_id)
+
+    assert BarsTableColumn.TIMESTAMP.value == TickersTableColumn.TIMESTAMP.value
+
     config = bigquery.job.LoadJobConfig(
         time_partitioning=bigquery.table.TimePartitioning(
-            field=TableColumn.TIMESTAMP.value
+            field=BarsTableColumn.TIMESTAMP.value
         ),
         schema_update_options=bigquery.job.SchemaUpdateOption.ALLOW_FIELD_ADDITION,
     )

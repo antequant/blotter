@@ -9,6 +9,7 @@ import ib_insync
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.backfill import backfill_bars
 from blotter.ib_helpers import IBThread
+from blotter.options import snapshot_options
 from blotter.streaming import StreamingID, StreamingManager
 from google.cloud import bigquery, error_reporting
 
@@ -162,4 +163,17 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.HealthCheckResponse:
         logging.info(f"HealthCheck: {request}")
         return blotter_pb2.HealthCheckResponse()
+
+    def SnapshotOptionChain(
+        self, request: blotter_pb2.SnapshotOptionChainRequest, context: grpc.ServicerContext,
+    ) -> blotter_pb2.SnapshotOptionChainResponse:
+        logging.info(f"SnapshotOptionChain: {request}")
+
+        async def _snapshot(ib_client: ib_insync.IB) -> bigquery.LoadJob:
+            return await snapshot_options(ib_client, request.contractSpecifier)
+
+        job = self._run_in_ib_thread(_snapshot).result()
+        logging.info(f"BigQuery import job launched: {job.job_id}")
+
+        return blotter_pb2.SnapshotOptionChainResponse(importJobID=job.job_id)
 

@@ -1,11 +1,15 @@
 import asyncio
 import concurrent.futures
+import logging
+import math
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import (
     Any,
     Awaitable,
     Callable,
     Dict,
+    Iterable,
     List,
     NamedTuple,
     NoReturn,
@@ -14,9 +18,11 @@ from typing import (
     Union,
 )
 
-from blotter import blotter_pb2, request_helpers
-from ib_insync import IB, Contract, ContractDetails
 import ib_insync.util
+import pandas as pd
+from ib_insync import IB, Contract, ContractDetails, Ticker
+
+from blotter import blotter_pb2, request_helpers
 
 
 @dataclass(frozen=True)
@@ -59,6 +65,37 @@ def serialize_contract(contract: Contract) -> Dict[str, Any]:
 
 def deserialize_contract(d: Dict[str, Any]) -> Contract:
     return Contract(**d)
+
+
+_Num = TypeVar("_Num", float, Decimal)
+
+
+def sanitize_price(
+    price: Optional[_Num],
+    can_be_negative: bool,
+    count: Union[int, float, Decimal, None] = None,
+) -> Optional[_Num]:
+    """
+    Attempts to sanitize away different variations of "invalid" yielded by IB APIs and elsewhere.
+
+    Returns a sanitized number, or `None` if the number was determined to be invalid.
+    """
+
+    if price is None or count == 0:
+        return None
+
+    if isinstance(price, Decimal):
+        if not price.is_finite():
+            return None
+    elif not math.isfinite(price):
+        return None
+
+    if price == 0:
+        return None
+    elif price < 0 and not can_be_negative:
+        return None
+
+    return price
 
 
 _T = TypeVar("_T")
@@ -147,8 +184,18 @@ class IBThread:
         def _ib_error_event_handler(
             reqId: int, errorCode: int, errorString: str, contract: Optional[Contract]
         ) -> None:
-            is_warning = (errorCode >= 1100 and errorCode < 2000) or (
-                errorCode >= 2100 and errorCode < 3000
+            if errorCode == 200:
+                # "No security definition has been found" error.
+                # This will occur a lot if we're speculatively qualifying contracts, so just filter it out.
+                return
+            elif errorCode == 0 and "Warning: Approaching max rate" in errorString:
+                # Rate limiting warning. Don't need to record this.
+                return
+
+            is_warning = (
+                (errorCode >= 1100 and errorCode < 2000)
+                or (errorCode >= 2100 and errorCode < 3000)
+                or "Warning:" in errorString
             )
 
             err = (IBWarning if is_warning else IBError)(

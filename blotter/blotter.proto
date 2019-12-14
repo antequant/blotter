@@ -203,6 +203,14 @@ message HealthCheckRequest {}
 // See the Blotter service below.
 message HealthCheckResponse {}
 
+message SnapshotOptionChainRequest {
+    ContractSpecifier contractSpecifier = 1;
+}
+
+message SnapshotOptionChainResponse {
+    string importJobID = 1;
+}
+
 /*
  * RPC interface to the Blotter microservice, for sending market data to BigQuery.
  */
@@ -228,4 +236,6 @@ service Blotter {
      * Cancels a previous real-time data subscription. Any outstanding BigQuery uploads will still complete.
      */
     rpc CancelRealTimeData(CancelRealTimeDataRequest) returns (CancelRealTimeDataResponse) {}
+
+    rpc SnapshotOptionChain(SnapshotOptionChainRequest) returns (SnapshotOptionChainResponse) {}
 }
