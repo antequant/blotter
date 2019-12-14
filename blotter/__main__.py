@@ -27,6 +27,10 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--report-errors", help="Report errors to Google Cloud.", action="store_true",
+)
+
+parser.add_argument(
     "-p",
     "--port",
     help="The port to listen for incoming connections on.",
@@ -89,7 +93,7 @@ def main() -> None:
     # https://bugs.python.org/issue23057
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    error_handler = ErrorHandlerConfiguration(report_to_gcloud=True)
+    error_handler = ErrorHandlerConfiguration(report_to_gcloud=args.report_errors)
 
     def handle_ib_thread_error(error: Exception) -> None:
         with error_handler(f"Reporting error from IB:"):
