@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Dict, Iterable, List, Union
+from typing import Any, Dict, Iterable, List, Union, cast
 
 import ib_insync
 import pandas as pd
@@ -64,9 +64,7 @@ async def _load_tickers_into_dataframe(
     tickers = await ib_client.reqTickersAsync(*contracts, regulatorySnapshot=False)
     logging.info(f"Fetched {len(tickers)} tickers")
 
-    def _ticker_dict(
-        t: ib_insync.Ticker,
-    ) -> Dict[str, Union[str, datetime, float, None]]:
+    def _ticker_dict(t: Any,) -> Dict[str, Union[str, datetime, float, None]]:  # FIXME
         price_is_negative = t.close < 0
 
         return {
@@ -96,7 +94,11 @@ async def _load_tickers_into_dataframe(
         }
 
     df = pd.DataFrame.from_records(
-        (_ticker_dict(t) for t in tickers if t.time and t.contract)
+        (
+            _ticker_dict(t)
+            for t in tickers
+            if cast(Any, t).time and cast(Any, t).contract
+        )
     )
 
     df = df.astype(
