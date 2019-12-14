@@ -99,7 +99,24 @@ async def _load_tickers_into_dataframe(
         (_ticker_dict(t) for t in tickers if t.time and t.contract)
     )
 
-    df[TickersTableColumn.TIMESTAMP.value] = df[TickersTableColumn.TIMESTAMP.value].dt.round('ms')
+    df = df.astype(
+        {
+            TickersTableColumn.HIGH.value: "float64",
+            TickersTableColumn.LOW.value: "float64",
+            TickersTableColumn.CLOSE.value: "float64",
+            TickersTableColumn.VOLUME.value: "float64",
+            TickersTableColumn.BID.value: "float64",
+            TickersTableColumn.BID_SIZE.value: "float64",
+            TickersTableColumn.ASK.value: "float64",
+            TickersTableColumn.ASK_SIZE.value: "float64",
+            TickersTableColumn.LAST.value: "float64",
+            TickersTableColumn.LAST_SIZE.value: "float64",
+        }
+    )
+
+    df[TickersTableColumn.TIMESTAMP.value] = df[
+        TickersTableColumn.TIMESTAMP.value
+    ].dt.round("ms")
 
     logging.debug(f"Tickers DataFrame: {df}")
     return df
