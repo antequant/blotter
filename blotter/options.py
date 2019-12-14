@@ -99,6 +99,8 @@ async def _load_tickers_into_dataframe(
         (_ticker_dict(t) for t in tickers if t.time and t.contract)
     )
 
+    df[TickersTableColumn.TIMESTAMP.value] = df[TickersTableColumn.TIMESTAMP.value].dt.round('ms')
+
     logging.debug(f"Tickers DataFrame: {df}")
     return df
 
