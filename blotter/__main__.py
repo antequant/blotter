@@ -1,22 +1,22 @@
 import asyncio
-import logging
 import random
 import signal
 import sys
 from argparse import ArgumentParser
 from datetime import timedelta
+from logging import getLogger
 from types import TracebackType
 from typing import Type
 
-import google.cloud.logging
 import ib_insync
 
 from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBError, IBThread, IBWarning
+from blotter.logging import configure_package_logger, configure_root_logger
 from blotter.server import Servicer
 from blotter.streaming import StreamingManager
 
-logger = logging.getLogger(__package__)
+logger = getLogger(__package__)
 
 parser = ArgumentParser(
     prog="blotter",
@@ -89,14 +89,9 @@ def install_except_hook(error_handler: ErrorHandlerConfiguration) -> None:
 def main() -> None:
     args = parser.parse_args()
 
-    google.cloud.logging.Client().setup_logging(
-        log_level=logging.DEBUG if args.verbose >= 2 else logging.INFO
-    )
-
-    if args.verbose:
-        logging.basicConfig(level=logging.DEBUG if args.verbose >= 2 else logging.INFO)
-
     error_handler = ErrorHandlerConfiguration(report_to_gcloud=args.report_errors)
+    configure_root_logger(args.verbose)
+    configure_package_logger(logger, args.verbose)
 
     ib = ib_insync.IB()
 
