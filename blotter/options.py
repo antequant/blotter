@@ -87,6 +87,7 @@ async def _load_tickers_into_dataframe(
                 TickersTableColumn.LAST_SIZE.value: t.lastSize,
             }
             for t in tickers
+            if t.time and t.contract
         )
     )
 
