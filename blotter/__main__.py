@@ -7,8 +7,8 @@ from datetime import timedelta
 
 import google.cloud.logging
 import ib_insync
-from google.cloud import error_reporting
 
+from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBError, IBThread, IBWarning
 from blotter.server import Servicer
 from blotter.streaming import StreamingManager
@@ -65,18 +65,6 @@ parser.add_argument(
 )
 
 
-def error_handler(error: Exception) -> None:
-    try:
-        raise error
-    except IBWarning:
-        logging.warning(f"Warning from IB: {error}")
-    except ConnectionError:
-        logging.exception(f"Connection error from IB:")
-    except Exception:
-        logging.exception(f"Reporting error from IB:")
-        error_reporting.Client().report_exception()
-
-
 def main() -> None:
     args = parser.parse_args()
 
@@ -101,14 +89,26 @@ def main() -> None:
     # https://bugs.python.org/issue23057
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    thread = IBThread(ib, error_handler=error_handler)
+    error_handler = ErrorHandlerConfiguration(report_to_gcloud=True)
+
+    def handle_ib_thread_error(error: Exception) -> None:
+        with error_handler(f"Reporting error from IB:"):
+            try:
+                raise error
+            except IBWarning:
+                logging.warning(f"Warning from IB: {error}")
+            except ConnectionError:
+                logging.exception(f"Connection error from IB:")
+
+    thread = IBThread(ib, error_handler=handle_ib_thread_error)
     port = args.port or random.randint(49152, 65535)
     streaming_manager = StreamingManager(
+        error_handler=error_handler,
         batch_size=args.streaming_batch_size,
         batch_timeout=args.streaming_batch_timeout,
     )
 
-    (servicer, server) = Servicer.start(port, thread, streaming_manager)
+    (servicer, server) = Servicer.start(port, thread, streaming_manager, error_handler)
     if args.resume:
         servicer.resume_streaming()
 

@@ -3,7 +3,9 @@ from enum import Enum, unique
 
 import ib_insync
 import pandas as pd
-from google.cloud import bigquery, error_reporting
+from google.cloud import bigquery
+
+from blotter.error_handling import ErrorHandlerConfiguration
 
 
 @unique
@@ -48,7 +50,9 @@ class TickersTableColumn(Enum):
     LAST_SIZE = "last_size"
 
 
-def upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
+def upload_dataframe(
+    table_id: str, df: pd.DataFrame, error_handler: ErrorHandlerConfiguration
+) -> bigquery.job.LoadJob:
     """
     Enqueues an asynchronous job to upload the given DataFrame to the named table.
 
@@ -73,12 +77,9 @@ def upload_dataframe(table_id: str, df: pd.DataFrame) -> bigquery.job.LoadJob:
     job = client.load_table_from_dataframe(df, table_ref, job_config=config)
 
     def _report_job_exception(job: bigquery.job.LoadJob) -> None:
-        try:
+        with error_handler(f"Exception thrown from BigQuery job {job.job_id}"):
             result = job.result()
             logging.info(f"BigQuery job {job.job_id} completed with result: {result}")
-        except Exception:
-            logging.exception(f"Exception thrown from BigQuery job {job.job_id}")
-            error_reporting.Client().report_exception()
 
     job.add_done_callback(_report_job_exception)
     return job

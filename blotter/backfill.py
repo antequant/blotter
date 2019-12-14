@@ -8,6 +8,7 @@ from google.cloud import bigquery
 
 from blotter import request_helpers
 from blotter.blotter_pb2 import ContractSpecifier
+from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import DataError, qualify_contract_specifier
 from blotter.upload import (
     BarsTableColumn,
@@ -24,6 +25,7 @@ async def backfill_bars(
     bar_size: str,
     bar_source: str,
     regular_trading_hours_only: bool,
+    error_handler: ErrorHandlerConfiguration,
 ) -> Tuple[datetime, bigquery.LoadJob]:
     """
     Fetches historical bars (of type `bar_source` and interval `bar_size`) for the given contract over the specified time interval, then enqueues a BigQuery import job.
@@ -68,6 +70,6 @@ async def backfill_bars(
     df[BarsTableColumn.BAR_SOURCE.value] = barList.whatToShow
 
     logging.debug(df)
-    job = upload_dataframe(table_name_for_contract(con), df)
+    job = upload_dataframe(table_name_for_contract(con), df, error_handler)
 
     return (earliest_date, job)

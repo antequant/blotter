@@ -7,6 +7,7 @@ import pandas as pd
 from google.cloud import bigquery
 
 from blotter.blotter_pb2 import ContractSpecifier
+from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import qualify_contract_specifier, sanitize_price
 from blotter.upload import TickersTableColumn, table_name_for_contract, upload_dataframe
 
@@ -125,7 +126,9 @@ async def _load_tickers_into_dataframe(
 
 
 async def snapshot_options(
-    ib_client: ib_insync.IB, underlying_specifier: ContractSpecifier,
+    ib_client: ib_insync.IB,
+    underlying_specifier: ContractSpecifier,
+    error_handler: ErrorHandlerConfiguration,
 ) -> bigquery.LoadJob:
     """
     Uploads a snapshot of the current options chain for the given contract specifier.
@@ -138,4 +141,4 @@ async def snapshot_options(
     df = await _load_tickers_into_dataframe(ib_client, contracts)
 
     table_name = f"{table_name_for_contract(underlying)}_options"
-    return upload_dataframe(table_name, df)
+    return upload_dataframe(table_name, df, error_handler)

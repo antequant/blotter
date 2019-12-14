@@ -8,13 +8,17 @@ from typing import Any, Dict, Iterator, NewType, Optional
 
 import ib_insync
 import pandas as pd
-from google.cloud import error_reporting, firestore
+from google.cloud import firestore
 
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.ib_helpers import (IBThread, deserialize_contract,
-                                qualify_contract_specifier, serialize_contract)
-from blotter.upload import (BarsTableColumn,
-                            table_name_for_contract, upload_dataframe)
+from blotter.error_handling import ErrorHandlerConfiguration
+from blotter.ib_helpers import (
+    IBThread,
+    deserialize_contract,
+    qualify_contract_specifier,
+    serialize_contract,
+)
+from blotter.upload import BarsTableColumn, table_name_for_contract, upload_dataframe
 
 StreamingID = NewType("StreamingID", str)
 """A unique ID for ongoing market data streaming."""
@@ -84,6 +88,7 @@ class StreamingManager:
 
     def __init__(
         self,
+        error_handler: ErrorHandlerConfiguration,
         batch_size: int = DEFAULT_BATCH_SIZE,
         batch_timeout: timedelta = DEFAULT_BATCH_LATENCY,
     ) -> None:
@@ -99,6 +104,7 @@ class StreamingManager:
 
         self._real_time_bars = {}
         self._firestore_db = firestore.Client()
+        self._error_handler = error_handler
         self._batch_size = batch_size
         self._batch_timeout = batch_timeout
         super().__init__()
@@ -116,23 +122,24 @@ class StreamingManager:
 
         docs = self._firestore_collection.stream()
         for doc in docs:
-            try:
+            streaming_job = None
+            with self._error_handler(
+                f"Failed to deserialize streaming job from document {doc}"
+            ):
                 streaming_job = _StreamingJob(**doc.to_dict())
-            except Exception:
-                logging.exception(
-                    f"Failed to deserialize streaming job from document {doc}"
-                )
-                error_reporting.Client().report_exception()
+
+            if streaming_job is None:
                 continue
 
             streaming_id = StreamingID(doc.id)
 
             async def _resume_job(ib_client: ib_insync.IB) -> None:
-                try:
+                assert streaming_job is not None
+
+                with self._error_handler(
+                    f"Failed to resume streaming job {streaming_id}"
+                ):
                     await self._start_job(ib_client, streaming_job, streaming_id)
-                except Exception:
-                    logging.exception(f"Failed to resume streaming job {streaming_id}")
-                    error_reporting.Client().report_exception()
 
             logging.info(
                 f"Resuming streaming for {streaming_job} with ID {streaming_id}"
@@ -261,35 +268,36 @@ class StreamingManager:
                 batch_timer.cancel()
                 batch_timer = None
 
-            try:
-                df = ib_insync.util.df(bars)
-                bars.clear()
+            with self._error_handler(f"Cancelled real-time data due to exception:"):
+                try:
+                    df = ib_insync.util.df(bars)
+                    bars.clear()
 
-                # See fields on RealTimeBar.
-                df = pd.DataFrame(
-                    data={
-                        BarsTableColumn.TIMESTAMP.value: df["time"],
-                        BarsTableColumn.OPEN.value: df["open_"],
-                        BarsTableColumn.HIGH.value: df["high"],
-                        BarsTableColumn.LOW.value: df["low"],
-                        BarsTableColumn.CLOSE.value: df["close"],
-                        BarsTableColumn.VOLUME.value: df["volume"],
-                        BarsTableColumn.AVERAGE_PRICE.value: df["wap"],
-                        BarsTableColumn.BAR_COUNT.value: df["count"],
-                    }
-                )
+                    # See fields on RealTimeBar.
+                    df = pd.DataFrame(
+                        data={
+                            BarsTableColumn.TIMESTAMP.value: df["time"],
+                            BarsTableColumn.OPEN.value: df["open_"],
+                            BarsTableColumn.HIGH.value: df["high"],
+                            BarsTableColumn.LOW.value: df["low"],
+                            BarsTableColumn.CLOSE.value: df["close"],
+                            BarsTableColumn.VOLUME.value: df["volume"],
+                            BarsTableColumn.AVERAGE_PRICE.value: df["wap"],
+                            BarsTableColumn.BAR_COUNT.value: df["count"],
+                        }
+                    )
 
-                df[BarsTableColumn.BAR_SOURCE.value] = bars.whatToShow
+                    df[BarsTableColumn.BAR_SOURCE.value] = bars.whatToShow
 
-                logging.debug(df)
-                job = upload_dataframe(table_name_for_contract(bars.contract), df)
+                    logging.debug(df)
+                    job = upload_dataframe(
+                        table_name_for_contract(bars.contract), df, self._error_handler
+                    )
 
-                logging.info(f"BigQuery data import job launched: {job.job_id}")
-            except Exception:
-                logging.exception(f"Cancelling real-time data due to exception")
-                error_reporting.Client().report_exception()
-
-                self._cancel_job(ib_client, streaming_id)
+                    logging.info(f"BigQuery data import job launched: {job.job_id}")
+                except Exception:
+                    self._cancel_job(ib_client, streaming_id)
+                    raise
 
         bar_list = streaming_job.start_request(ib_client)
 

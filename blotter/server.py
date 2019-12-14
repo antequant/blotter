@@ -8,10 +8,11 @@ import grpc
 import ib_insync
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.backfill import backfill_bars
+from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBThread
 from blotter.options import snapshot_options
 from blotter.streaming import StreamingID, StreamingManager
-from google.cloud import bigquery, error_reporting
+from google.cloud import bigquery
 
 _T = TypeVar("_T")
 
@@ -27,6 +28,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         port: int,
         ib_thread: IBThread,
         streaming_manager: StreamingManager,
+        error_handler: ErrorHandlerConfiguration,
         executor: concurrent.futures.ThreadPoolExecutor = concurrent.futures.ThreadPoolExecutor(),
     ) -> Tuple["Servicer", grpc.Server]:
         """
@@ -34,20 +36,26 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         """
 
         s = grpc.server(executor)
-        servicer = cls(ib_thread, streaming_manager)
+        servicer = cls(ib_thread, streaming_manager, error_handler)
         blotter_pb2_grpc.add_BlotterServicer_to_server(servicer, s)
         s.add_insecure_port(f"[::]:{port}")
         s.start()
 
         return (servicer, s)
 
-    def __init__(self, ib_thread: IBThread, streaming_manager: StreamingManager):
+    def __init__(
+        self,
+        ib_thread: IBThread,
+        streaming_manager: StreamingManager,
+        error_handler: ErrorHandlerConfiguration,
+    ):
         """
         Initializes this handler to invoke ib_insync via the given `ib_thread`.
         """
 
         self._ib_thread = ib_thread
         self._streaming_manager = streaming_manager
+        self._error_handler = error_handler
         super().__init__()
 
     def resume_streaming(self) -> None:
@@ -68,11 +76,8 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         fut = self._ib_thread.schedule(fn)
 
         def _report_future_exception(future: "concurrent.futures.Future[_T]") -> None:
-            try:
+            with self._error_handler(f"Exception thrown in IB thread:"):
                 future.result()
-            except Exception:
-                logging.exception(f"Exception thrown in IB thread:")
-                error_reporting.Client().report_exception()
 
         fut.add_done_callback(_report_future_exception)
         return fut
@@ -115,6 +120,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
                 bar_size=request_helpers.bar_size_str(request.barSize),
                 bar_source=request_helpers.historical_bar_source_str(request.barSource),
                 regular_trading_hours_only=request.regularTradingHoursOnly,
+                error_handler=self._error_handler,
             )
 
         while end_date > start_date:
@@ -165,12 +171,16 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         return blotter_pb2.HealthCheckResponse()
 
     def SnapshotOptionChain(
-        self, request: blotter_pb2.SnapshotOptionChainRequest, context: grpc.ServicerContext,
+        self,
+        request: blotter_pb2.SnapshotOptionChainRequest,
+        context: grpc.ServicerContext,
     ) -> blotter_pb2.SnapshotOptionChainResponse:
         logging.info(f"SnapshotOptionChain: {request}")
 
         async def _snapshot(ib_client: ib_insync.IB) -> bigquery.LoadJob:
-            return await snapshot_options(ib_client, request.contractSpecifier)
+            return await snapshot_options(
+                ib_client, request.contractSpecifier, self._error_handler
+            )
 
         job = self._run_in_ib_thread(_snapshot).result()
         logging.info(f"BigQuery import job launched: {job.job_id}")
