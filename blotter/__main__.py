@@ -16,6 +16,8 @@ from blotter.ib_helpers import IBError, IBThread, IBWarning
 from blotter.server import Servicer
 from blotter.streaming import StreamingManager
 
+logger = logging.getLogger(__package__)
+
 parser = ArgumentParser(
     prog="blotter",
     description="Microservice to connect to Interactive Brokers and stream market data into Google BigQuery",
@@ -98,7 +100,7 @@ def main() -> None:
 
     ib = ib_insync.IB()
 
-    logging.info(f"Connecting to IB on {args.tws_host}:{args.tws_port}")
+    logger.info(f"Connecting to IB on {args.tws_host}:{args.tws_port}")
     ib.connect(
         host=args.tws_host,
         port=args.tws_port,
@@ -115,9 +117,9 @@ def main() -> None:
             try:
                 raise error
             except IBWarning:
-                logging.warning(f"Warning from IB: {error}")
+                logger.warning(f"Warning from IB: {error}")
             except ConnectionError:
-                logging.exception(f"Connection error from IB:")
+                logger.exception(f"Connection error from IB:")
 
     thread = IBThread(ib, error_handler=handle_ib_thread_error)
     port = args.port or random.randint(49152, 65535)
@@ -131,7 +133,7 @@ def main() -> None:
     if args.resume:
         servicer.resume_streaming()
 
-    logging.info(f"Server listening on port {port}")
+    logger.info(f"Server listening on port {port}")
     thread.run_forever()
 
 

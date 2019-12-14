@@ -1,11 +1,13 @@
-import logging
 from enum import Enum, unique
+from logging import getLogger
 
 import ib_insync
 import pandas as pd
 from google.cloud import bigquery
 
 from blotter.error_handling import ErrorHandlerConfiguration
+
+logger = getLogger(__name__)
 
 
 @unique
@@ -79,7 +81,7 @@ def upload_dataframe(
     def _report_job_exception(job: bigquery.job.LoadJob) -> None:
         with error_handler(f"Exception thrown from BigQuery job {job.job_id}"):
             result = job.result()
-            logging.info(f"BigQuery job {job.job_id} completed with result: {result}")
+            logger.info(f"BigQuery job {job.job_id} completed with result: {result}")
 
     job.add_done_callback(_report_job_exception)
     return job

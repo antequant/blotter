@@ -1,5 +1,5 @@
-import logging
 from datetime import datetime
+from logging import getLogger
 from typing import Tuple
 
 import ib_insync
@@ -10,11 +10,9 @@ from blotter import request_helpers
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import DataError, qualify_contract_specifier
-from blotter.upload import (
-    BarsTableColumn,
-    table_name_for_contract,
-    upload_dataframe,
-)
+from blotter.upload import BarsTableColumn, table_name_for_contract, upload_dataframe
+
+logger = getLogger(__name__)
 
 
 async def backfill_bars(
@@ -50,7 +48,7 @@ async def backfill_bars(
 
     earliest_date = barList[0].date
 
-    logging.info(f"Loaded {len(barList)} historical bars for {con}")
+    logger.info(f"Loaded {len(barList)} historical bars for {con}")
     df = ib_insync.util.df(barList)
 
     # See fields on BarData.
@@ -69,7 +67,7 @@ async def backfill_bars(
 
     df[BarsTableColumn.BAR_SOURCE.value] = barList.whatToShow
 
-    logging.debug(df)
+    logger.debug(df)
     job = upload_dataframe(table_name_for_contract(con), df, error_handler)
 
     return (earliest_date, job)

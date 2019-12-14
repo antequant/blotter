@@ -1,6 +1,6 @@
 import asyncio
 import concurrent.futures
-import logging
+from logging import getLogger
 from datetime import datetime, timedelta, timezone
 from typing import Awaitable, Callable, Iterator, Optional, Tuple, TypeVar
 
@@ -13,6 +13,8 @@ from blotter.ib_helpers import IBThread
 from blotter.options import snapshot_options
 from blotter.streaming import StreamingID, StreamingManager
 from google.cloud import bigquery
+
+logger = getLogger(__name__)
 
 _T = TypeVar("_T")
 
@@ -64,7 +66,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         """
 
         streaming_ids = list(self._streaming_manager.resume_streaming(self._ib_thread))
-        logging.info(f"Resumed streaming IDs {streaming_ids}")
+        logger.info(f"Resumed streaming IDs {streaming_ids}")
 
     def _run_in_ib_thread(
         self, fn: Callable[[ib_insync.IB], Awaitable[_T]]
@@ -87,7 +89,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         request: blotter_pb2.LoadHistoricalDataRequest,
         context: grpc.ServicerContext,
     ) -> Iterator[blotter_pb2.LoadHistoricalDataResponse]:
-        logging.info(f"LoadHistoricalData: {request}")
+        logger.info(f"LoadHistoricalData: {request}")
 
         td = request_helpers.duration_timedelta_atleast(request.duration)
         end_date = datetime.fromtimestamp(request.endTimestampUTC, tz=timezone.utc)
@@ -96,7 +98,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             duration = request_helpers.duration_str(request.duration)
             start_date = end_date - timedelta(seconds=1)
         else:
-            logging.debug(f"Splitting requested duration {td}")
+            logger.debug(f"Splitting requested duration {td}")
             duration = request_helpers.duration_str(
                 blotter_pb2.Duration(count=10, unit=blotter_pb2.Duration.TimeUnit.DAYS)
             )
@@ -108,7 +110,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         ) -> Tuple[datetime, bigquery.LoadJob]:
             nonlocal end_date
 
-            logging.info(
+            logger.info(
                 f"Backfilling {duration} from {end_date} of {request.contractSpecifier}"
             )
 
@@ -126,7 +128,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         while end_date > start_date:
             (end_date, job) = self._run_in_ib_thread(_backfill).result()
 
-            logging.info(f"BigQuery backfill job launched: {job.job_id}")
+            logger.info(f"BigQuery backfill job launched: {job.job_id}")
             yield blotter_pb2.LoadHistoricalDataResponse(backfillJobID=job.job_id)
 
     def StartRealTimeData(
@@ -134,7 +136,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         request: blotter_pb2.StartRealTimeDataRequest,
         context: grpc.ServicerContext,
     ) -> blotter_pb2.StartRealTimeDataResponse:
-        logging.info(f"StartRealTimeData: {request}")
+        logger.info(f"StartRealTimeData: {request}")
 
         async def _start_stream(ib_client: ib_insync.IB) -> StreamingID:
             return await self._streaming_manager.start_stream(
@@ -145,7 +147,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             )
 
         streaming_id = self._run_in_ib_thread(_start_stream).result()
-        logging.debug(f"Real-time bars streaming ID: {streaming_id}")
+        logger.debug(f"Real-time bars streaming ID: {streaming_id}")
 
         return blotter_pb2.StartRealTimeDataResponse(requestID=streaming_id)
 
@@ -154,7 +156,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         request: blotter_pb2.CancelRealTimeDataRequest,
         context: grpc.ServicerContext,
     ) -> blotter_pb2.CancelRealTimeDataResponse:
-        logging.info(f"CancelRealTimeData: {request}")
+        logger.info(f"CancelRealTimeData: {request}")
 
         async def _cancel_stream(ib_client: ib_insync.IB) -> None:
             await self._streaming_manager.cancel_stream(
@@ -167,7 +169,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     def HealthCheck(
         self, request: blotter_pb2.HealthCheckRequest, context: grpc.ServicerContext,
     ) -> blotter_pb2.HealthCheckResponse:
-        logging.info(f"HealthCheck: {request}")
+        logger.info(f"HealthCheck: {request}")
         return blotter_pb2.HealthCheckResponse()
 
     def SnapshotOptionChain(
@@ -175,7 +177,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         request: blotter_pb2.SnapshotOptionChainRequest,
         context: grpc.ServicerContext,
     ) -> blotter_pb2.SnapshotOptionChainResponse:
-        logging.info(f"SnapshotOptionChain: {request}")
+        logger.info(f"SnapshotOptionChain: {request}")
 
         async def _snapshot(ib_client: ib_insync.IB) -> bigquery.LoadJob:
             return await snapshot_options(
@@ -183,7 +185,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
             )
 
         job = self._run_in_ib_thread(_snapshot).result()
-        logging.info(f"BigQuery import job launched: {job.job_id}")
+        logger.info(f"BigQuery import job launched: {job.job_id}")
 
         return blotter_pb2.SnapshotOptionChainResponse(importJobID=job.job_id)
 

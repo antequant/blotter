@@ -1,5 +1,5 @@
-import logging
 from datetime import datetime
+from logging import getLogger
 from typing import Any, Dict, Iterable, List, Union, cast
 
 import ib_insync
@@ -10,6 +10,8 @@ from blotter.blotter_pb2 import ContractSpecifier
 from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import qualify_contract_specifier, sanitize_price
 from blotter.upload import TickersTableColumn, table_name_for_contract, upload_dataframe
+
+logger = getLogger(__name__)
 
 
 async def _look_up_options(
@@ -25,7 +27,7 @@ async def _look_up_options(
         underlyingConId=underlying.conId,
     )
 
-    logging.info(f"Loaded {len(option_chains)} option chains for {underlying}")
+    logger.info(f"Loaded {len(option_chains)} option chains for {underlying}")
 
     option_contracts = (
         ib_insync.Option(
@@ -46,7 +48,7 @@ async def _look_up_options(
 
     qualified_contracts = await ib_client.qualifyContractsAsync(*option_contracts)
 
-    logging.info(
+    logger.info(
         f"Qualified {len(qualified_contracts)} options contracts for {underlying}"
     )
 
@@ -63,7 +65,7 @@ async def _load_tickers_into_dataframe(
     """
 
     tickers = await ib_client.reqTickersAsync(*contracts, regulatorySnapshot=False)
-    logging.info(f"Fetched {len(tickers)} tickers")
+    logger.info(f"Fetched {len(tickers)} tickers")
 
     def _ticker_dict(t: Any,) -> Dict[str, Union[str, datetime, float, None]]:  # FIXME
         price_is_negative = t.close < 0
@@ -121,7 +123,7 @@ async def _load_tickers_into_dataframe(
         TickersTableColumn.TIMESTAMP.value
     ].dt.round("ms")
 
-    logging.debug(f"Tickers DataFrame: {df}")
+    logger.debug(f"Tickers DataFrame: {df}")
     return df
 
 

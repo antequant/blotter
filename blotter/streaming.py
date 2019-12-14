@@ -1,9 +1,9 @@
 import asyncio
 import dataclasses
-import logging
 import math
 from dataclasses import dataclass
 from datetime import timedelta
+from logging import getLogger
 from typing import Any, Dict, Iterator, NewType, Optional
 
 import ib_insync
@@ -12,13 +12,12 @@ from google.cloud import firestore
 
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.error_handling import ErrorHandlerConfiguration
-from blotter.ib_helpers import (
-    IBThread,
-    deserialize_contract,
-    qualify_contract_specifier,
-    serialize_contract,
-)
-from blotter.upload import BarsTableColumn, table_name_for_contract, upload_dataframe
+from blotter.ib_helpers import (IBThread, deserialize_contract,
+                                qualify_contract_specifier, serialize_contract)
+from blotter.upload import (BarsTableColumn, table_name_for_contract,
+                            upload_dataframe)
+
+logger = getLogger(__name__)
 
 StreamingID = NewType("StreamingID", str)
 """A unique ID for ongoing market data streaming."""
@@ -98,7 +97,7 @@ class StreamingManager:
         ), f"Batch timeout {batch_timeout} should be at least 1 second"
 
         if batch_size * self._BAR_SIZE > batch_timeout:
-            logging.warn(
+            logger.warn(
                 f"Batch size {batch_size} would take {batch_size * self._BAR_SIZE} to collect, greater than timeout {batch_timeout}"
             )
 
@@ -141,7 +140,7 @@ class StreamingManager:
                 ):
                     await self._start_job(ib_client, streaming_job, streaming_id)
 
-            logging.info(
+            logger.info(
                 f"Resuming streaming for {streaming_job} with ID {streaming_id}"
             )
             ib_thread.schedule(_resume_job)
@@ -155,7 +154,7 @@ class StreamingManager:
         """
 
         doc = self._firestore_collection.document()
-        logging.debug(f"Recording streaming job with ID {doc.id}: {job}")
+        logger.debug(f"Recording streaming job with ID {doc.id}: {job}")
 
         doc.set(dataclasses.asdict(job))
         return StreamingID(doc.id)
@@ -165,7 +164,7 @@ class StreamingManager:
         Deletes a streaming job from Firestore.
         """
 
-        logging.debug(f"Removing streaming job with ID {job_id}")
+        logger.debug(f"Removing streaming job with ID {job_id}")
         self._firestore_collection.document(job_id).delete()
 
     def _cancel_job(
@@ -177,7 +176,7 @@ class StreamingManager:
         Returns the final `RealTimeBarList` associated with this ID, if it could be found.
         """
 
-        logging.debug(f"_real_time_bars before cancelling: {self._real_time_bars}")
+        logger.debug(f"_real_time_bars before cancelling: {self._real_time_bars}")
         bar_list = self._real_time_bars.pop(streaming_id, None)
         if bar_list is not None:
             ib_client.cancelRealTimeBars(bar_list)
@@ -210,7 +209,7 @@ class StreamingManager:
         )
 
         streaming_id = self._record_job_in_firestore(streaming_job)
-        logging.info(f"Starting streaming for {contract} with ID {streaming_id}")
+        logger.info(f"Starting streaming for {contract} with ID {streaming_id}")
 
         await self._start_job(ib_client, streaming_job, streaming_id)
         return streaming_id
@@ -235,7 +234,7 @@ class StreamingManager:
             nonlocal batch_timer
 
             bar_count = len(bars)
-            logging.debug(
+            logger.debug(
                 f"Received {bar_count} bars (has_new_bar={has_new_bar}, timer_fired={timer_fired})"
             )
 
@@ -243,7 +242,7 @@ class StreamingManager:
                 return
 
             if not timer_fired and bar_count < self._batch_size:
-                logging.debug(
+                logger.debug(
                     f"Skipping upload because bar count {bar_count} is less than batch size {self._batch_size}"
                 )
 
@@ -256,11 +255,11 @@ class StreamingManager:
                         True,
                     )
 
-                    logging.debug(f"Scheduled batch flush after {self._batch_timeout}")
+                    logger.debug(f"Scheduled batch flush after {self._batch_timeout}")
 
                 return
 
-            logging.info(
+            logger.info(
                 f"Flushing batch of {bar_count} real-time bars (timer_fired={timer_fired})"
             )
 
@@ -289,12 +288,12 @@ class StreamingManager:
 
                     df[BarsTableColumn.BAR_SOURCE.value] = bars.whatToShow
 
-                    logging.debug(df)
+                    logger.debug(df)
                     job = upload_dataframe(
                         table_name_for_contract(bars.contract), df, self._error_handler
                     )
 
-                    logging.info(f"BigQuery data import job launched: {job.job_id}")
+                    logger.info(f"BigQuery data import job launched: {job.job_id}")
                 except Exception:
                     self._cancel_job(ib_client, streaming_id)
                     raise
@@ -302,7 +301,7 @@ class StreamingManager:
         bar_list = streaming_job.start_request(ib_client)
 
         self._real_time_bars[streaming_id] = bar_list
-        logging.debug(f"_real_time_bars: {self._real_time_bars}")
+        logger.debug(f"_real_time_bars: {self._real_time_bars}")
 
         bar_list.updateEvent += _bars_updated
 
@@ -317,4 +316,4 @@ class StreamingManager:
 
         bar_list = self._cancel_job(ib_client, streaming_id)
         if bar_list is not None:
-            logging.info(f"Cancelled real time bars for contract {bar_list.contract}")
+            logger.info(f"Cancelled real time bars for contract {bar_list.contract}")

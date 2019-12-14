@@ -1,6 +1,5 @@
 import asyncio
 import concurrent.futures
-import logging
 import math
 from dataclasses import dataclass
 from decimal import Decimal
