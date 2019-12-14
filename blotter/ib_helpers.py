@@ -188,9 +188,14 @@ class IBThread:
                 # "No security definition has been found" error.
                 # This will occur a lot if we're speculatively qualifying contracts, so just filter it out.
                 return
+            elif errorCode == 0 and "Warning: Approaching max rate" in errorString:
+                # Rate limiting warning. Don't need to record this.
+                return
 
-            is_warning = (errorCode >= 1100 and errorCode < 2000) or (
-                errorCode >= 2100 and errorCode < 3000
+            is_warning = (
+                (errorCode >= 1100 and errorCode < 2000)
+                or (errorCode >= 2100 and errorCode < 3000)
+                or "Warning:" in errorString
             )
 
             err = (IBWarning if is_warning else IBError)(
