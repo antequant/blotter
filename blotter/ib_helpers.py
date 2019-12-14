@@ -1,7 +1,9 @@
 import asyncio
 import concurrent.futures
 import logging
+import math
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import (
     Any,
     Awaitable,
@@ -63,6 +65,37 @@ def serialize_contract(contract: Contract) -> Dict[str, Any]:
 
 def deserialize_contract(d: Dict[str, Any]) -> Contract:
     return Contract(**d)
+
+
+_Num = TypeVar("_Num", float, Decimal)
+
+
+def sanitize_price(
+    price: Optional[_Num],
+    can_be_negative: bool,
+    count: Union[int, float, Decimal, None] = None,
+) -> Optional[_Num]:
+    """
+    Attempts to sanitize away different variations of "invalid" yielded by IB APIs and elsewhere.
+
+    Returns a sanitized number, or `None` if the number was determined to be invalid.
+    """
+
+    if price is None or count == 0:
+        return None
+
+    if isinstance(price, Decimal):
+        if not price.is_finite():
+            return None
+    elif not math.isfinite(price):
+        return None
+
+    if price == 0:
+        return None
+    elif price < 0 and not can_be_negative:
+        return None
+
+    return price
 
 
 _T = TypeVar("_T")

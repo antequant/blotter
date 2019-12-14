@@ -1,17 +1,14 @@
 import logging
-from typing import Iterable, List
+from datetime import datetime
+from typing import Dict, Iterable, List, Union
 
 import ib_insync
 import pandas as pd
 from google.cloud import bigquery
 
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.ib_helpers import qualify_contract_specifier
-from blotter.upload import (
-    TickersTableColumn,
-    table_name_for_contract,
-    upload_dataframe,
-)
+from blotter.ib_helpers import qualify_contract_specifier, sanitize_price
+from blotter.upload import TickersTableColumn, table_name_for_contract, upload_dataframe
 
 
 async def _look_up_options(
@@ -67,26 +64,39 @@ async def _load_tickers_into_dataframe(
     tickers = await ib_client.reqTickersAsync(*contracts, regulatorySnapshot=False)
     logging.info(f"Fetched {len(tickers)} tickers")
 
+    def _ticker_dict(
+        t: ib_insync.Ticker,
+    ) -> Dict[str, Union[str, datetime, float, None]]:
+        price_is_negative = t.close < 0
+
+        return {
+            TickersTableColumn.SYMBOL.value: t.contract.localSymbol,
+            TickersTableColumn.CONTRACT_ID.value: t.contract.conId,
+            TickersTableColumn.TIMESTAMP.value: t.time,
+            TickersTableColumn.HIGH.value: sanitize_price(
+                t.high, can_be_negative=price_is_negative
+            ),
+            TickersTableColumn.LOW.value: sanitize_price(
+                t.low, can_be_negative=price_is_negative
+            ),
+            TickersTableColumn.CLOSE.value: t.close,
+            TickersTableColumn.VOLUME.value: t.volume,
+            TickersTableColumn.BID.value: sanitize_price(
+                t.bid, can_be_negative=price_is_negative, count=t.bidSize
+            ),
+            TickersTableColumn.BID_SIZE.value: t.bidSize,
+            TickersTableColumn.ASK.value: sanitize_price(
+                t.ask, can_be_negative=price_is_negative, count=t.askSize
+            ),
+            TickersTableColumn.ASK_SIZE.value: t.askSize,
+            TickersTableColumn.LAST.value: sanitize_price(
+                t.last, can_be_negative=price_is_negative, count=t.lastSize
+            ),
+            TickersTableColumn.LAST_SIZE.value: t.lastSize,
+        }
+
     df = pd.DataFrame.from_records(
-        (
-            {
-                TickersTableColumn.SYMBOL.value: t.contract.localSymbol,
-                TickersTableColumn.CONTRACT_ID.value: t.contract.conId,
-                TickersTableColumn.TIMESTAMP.value: t.time,
-                TickersTableColumn.HIGH.value: t.high,
-                TickersTableColumn.LOW.value: t.low,
-                TickersTableColumn.CLOSE.value: t.close,
-                TickersTableColumn.VOLUME.value: t.volume,
-                TickersTableColumn.BID.value: t.bid,
-                TickersTableColumn.BID_SIZE.value: t.bidSize,
-                TickersTableColumn.ASK.value: t.ask,
-                TickersTableColumn.ASK_SIZE.value: t.askSize,
-                TickersTableColumn.LAST.value: t.last,
-                TickersTableColumn.LAST_SIZE.value: t.lastSize,
-            }
-            for t in tickers
-            if t.time and t.contract
-        )
+        (_ticker_dict(t) for t in tickers if t.time and t.contract)
     )
 
     logging.debug(f"Tickers DataFrame: {df}")
