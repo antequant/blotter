@@ -1,10 +1,17 @@
 name: Python
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+    
+    tags:
+      - v*
+  
+  pull_request:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -35,3 +42,32 @@ jobs:
     - name: Check formatting
       run: |
         black --check --exclude '_pb2' .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Build Docker image
+      run: docker build . -t image
+
+    - name: Log in to GitHub Package Registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u "${{ github.actor }}" --password-stdin
+  
+    - name: Push image
+      if: github.event_name == 'push'
+      run: |
+        IMAGE_NAME=$(basename "${{ github.repository }}")
+        GPR_IMAGE_ID="docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME"
+        VERSION=$(basename "${{ github.ref }}")
+
+        if [ "$VERSION" == "master" ]
+        then
+          VERSION=latest
+        fi
+
+        docker tag image "$GPR_IMAGE_ID:$VERSION"
+        docker push "$GPR_IMAGE_ID:$VERSION"
