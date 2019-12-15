@@ -37,7 +37,7 @@ jobs:
 
     - name: Check formatting
       run: |
-        black --check --exclude '_pb2' --exclude 'ib[-_]insync' .
+        black --check --exclude '(_pb2|ib[-_]insync)' .
 
   deploy:
     needs: build
