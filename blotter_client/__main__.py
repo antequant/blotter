@@ -230,7 +230,9 @@ def ping(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
 
 
 def snapshot_options(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
-    request = blotter_pb2.SnapshotOptionChainRequest(contractSpecifier=contract_specifier_from_args(args))
+    request = blotter_pb2.SnapshotOptionChainRequest(
+        contractSpecifier=contract_specifier_from_args(args)
+    )
     logging.info(f"SnapshotOptionChain: {request}")
 
     response = stub.SnapshotOptionChain(request)

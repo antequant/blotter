@@ -188,4 +188,3 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logger.info(f"BigQuery import job launched: {job.job_id}")
 
         return blotter_pb2.SnapshotOptionChainResponse(importJobID=job.job_id)
-

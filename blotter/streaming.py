@@ -12,10 +12,13 @@ from google.cloud import firestore
 
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.error_handling import ErrorHandlerConfiguration
-from blotter.ib_helpers import (IBThread, deserialize_contract,
-                                qualify_contract_specifier, serialize_contract)
-from blotter.upload import (BarsTableColumn, table_name_for_contract,
-                            upload_dataframe)
+from blotter.ib_helpers import (
+    IBThread,
+    deserialize_contract,
+    qualify_contract_specifier,
+    serialize_contract,
+)
+from blotter.upload import BarsTableColumn, table_name_for_contract, upload_dataframe
 
 logger = getLogger(__name__)
 
