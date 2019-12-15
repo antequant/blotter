@@ -33,7 +33,7 @@ setup(
     ],
     install_requires=[
         "grpcio ~= 1.25",
-        "ib-insync ~= 0.9.58",
+        "-e git+https://github.com/antequant/ib_insync@typing#egg=ib_insync",
         "google-cloud-bigquery ~= 1.22",
         "google-cloud-error-reporting ~= 0.33",
         "google-cloud-firestore ~= 1.6",

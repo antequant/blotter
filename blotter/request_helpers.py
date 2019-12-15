@@ -43,7 +43,7 @@ def contract_from_specifier(specifier: ContractSpecifier) -> ib_insync.Contract:
         symbol=specifier.symbol,
         secType=security_type_mapping[specifier.securityType],
         lastTradeDateOrContractMonth=specifier.lastTradeDateOrContractMonth,
-        strike=Decimal(specifier.strike) if specifier.strike else 0.0,
+        strike=float(specifier.strike) if specifier.strike else 0.0,
         right=right_mapping[specifier.right],
         multiplier=specifier.multiplier,
         exchange=specifier.exchange,
