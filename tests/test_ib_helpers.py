@@ -1,17 +1,21 @@
 import asyncio
 import concurrent.futures
 import unittest
-from typing import Awaitable, List, Tuple
+from typing import Awaitable, List, Tuple, Union
 
 from ib_insync import IB
 
-from blotter.ib_helpers import IBThread
+from blotter.ib_helpers import IBError, IBThread
 
 
 class TestIBThread(unittest.TestCase):
     def setUp(self) -> None:
         self.loop = asyncio.get_event_loop()
-        self.thread = IBThread(IB(), self.loop)
+
+        def _error_handler(error: Union[Exception, IBError]) -> None:
+            self.fail(f"Exception thrown: {error}")
+
+        self.thread = IBThread(IB(), _error_handler, self.loop)
 
     def _run_thread(self) -> None:
         with self.assertRaises(AssertionError):
