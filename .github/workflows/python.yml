@@ -35,10 +35,6 @@ jobs:
       run: |
         python -m unittest -v
 
-    - name: Test installing
-      run: |
-        pip install .
-
     - name: Check formatting
       run: |
         black --check --exclude '_pb2' .
