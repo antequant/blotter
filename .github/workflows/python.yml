@@ -39,31 +39,31 @@ jobs:
       run: |
         black --check --exclude '(_pb2|ib[-_]insync)' .
 
-  # deploy:
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   if: github.event_name == 'push'
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
-  #   steps:
-  #   - uses: actions/checkout@v1
+    steps:
+    - uses: actions/checkout@v1
 
-  #   - name: Build Docker image
-  #     run: docker build . -t image
+    - name: Build Docker image
+      run: docker build . -t image
 
-  #   - name: Log in to GitHub Package Registry
-  #     run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u "${{ github.actor }}" --password-stdin
+    - name: Log in to GitHub Package Registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u "${{ github.actor }}" --password-stdin
   
-  #   - name: Push image
-  #     if: github.event_name == 'push'
-  #     run: |
-  #       IMAGE_NAME=$(basename "${{ github.repository }}")
-  #       GPR_IMAGE_ID="docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME"
-  #       VERSION=$(basename "${{ github.ref }}")
+    - name: Push image
+      if: github.event_name == 'push'
+      run: |
+        IMAGE_NAME=$(basename "${{ github.repository }}")
+        GPR_IMAGE_ID="docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME"
+        VERSION=$(basename "${{ github.ref }}")
 
-  #       if [ "$VERSION" == "master" ]
-  #       then
-  #         VERSION=latest
-  #       fi
+        if [ "$VERSION" == "master" ]
+        then
+          VERSION=latest
+        fi
 
-  #       docker tag image "$GPR_IMAGE_ID:$VERSION"
-  #       docker push "$GPR_IMAGE_ID:$VERSION"
+        docker tag image "$GPR_IMAGE_ID:$VERSION"
+        docker push "$GPR_IMAGE_ID:$VERSION"
