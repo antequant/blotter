@@ -43,6 +43,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
+    env:
+      GCP_PROJECT: tradesponder
+      GCP_IMAGE_NAME: blotter
 
     steps:
     - uses: actions/checkout@v1
@@ -53,7 +56,7 @@ jobs:
     - name: Log in to GitHub Package Registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u "${{ github.actor }}" --password-stdin
   
-    - name: Push image
+    - name: Push image to GitHub Package Registry
       if: github.event_name == 'push'
       run: |
         IMAGE_NAME=$(basename "${{ github.repository }}")
@@ -67,3 +70,27 @@ jobs:
 
         docker tag image "$GPR_IMAGE_ID:$VERSION"
         docker push "$GPR_IMAGE_ID:$VERSION"
+    
+    - name: Install Google Cloud SDK
+      run: |
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+        sudo apt-get install apt-transport-https ca-certificates gnupg
+
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+        sudo apt-get update && sudo apt-get install google-cloud-sdk
+    
+    - name: Log in to Google Cloud
+      run: |
+        yes 'n' | gcloud init
+        echo "${{ secrets.GCP_TOKEN }}" > gcp_token
+
+        gcloud auth activate-service-account "${{ secrets.GCP_USER }}" --key-file gcp_token
+        gcloud auth configure-docker
+    
+    - name: Push image to Google Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        GCP_IMAGE_ID="gcr.io/$GCP_PROJECT/$GCP_IMAGE_NAME"
+
+        docker tag image "$GCP_IMAGE_ID:latest"
+        docker push "$GCP_IMAGE_ID:latest"
