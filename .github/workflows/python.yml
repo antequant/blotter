@@ -82,9 +82,9 @@ jobs:
     - name: Log in to Google Cloud
       run: |
         yes 'n' | gcloud init
-        echo "${{ secrets.GCP_TOKEN }}" > gcp_token
+        echo "${{ secrets.GCP_TOKEN }}" > gcp_token.json
 
-        gcloud auth activate-service-account "${{ secrets.GCP_USER }}" --key-file gcp_token
+        gcloud auth activate-service-account "${{ secrets.GCP_USER }}" --key-file gcp_token.json
         yes | gcloud auth configure-docker
     
     - name: Push image to Google Container Registry
