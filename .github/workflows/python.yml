@@ -85,7 +85,7 @@ jobs:
         echo "${{ secrets.GCP_TOKEN }}" > gcp_token
 
         gcloud auth activate-service-account "${{ secrets.GCP_USER }}" --key-file gcp_token
-        gcloud auth configure-docker
+        yes | gcloud auth configure-docker
     
     - name: Push image to Google Container Registry
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
