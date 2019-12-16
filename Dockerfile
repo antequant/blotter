@@ -9,7 +9,7 @@ COPY LICENSE LICENSE
 COPY README.md README.md
 COPY setup.py setup.py
 RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir .
 
 COPY blotter blotter
 
