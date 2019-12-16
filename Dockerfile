@@ -1,7 +1,7 @@
 FROM python:slim
 
 RUN apt-get update
-RUN apt-get install -y git cmake
+RUN apt-get install -y git
 
 WORKDIR /usr/src/path
 
