@@ -8,8 +8,7 @@ WORKDIR /usr/src/path
 COPY LICENSE LICENSE
 COPY README.md README.md
 COPY setup.py setup.py
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir .
+RUN pip install --only-binary pyarrow --no-cache-dir .
 
 COPY blotter blotter
 
