@@ -82,7 +82,7 @@ jobs:
     - name: Log in to Google Cloud
       run: |
         yes 'n' | gcloud init
-        cat <<< "${{ secrets.GCP_TOKEN }}" > gcp_token.json
+        cat <<< '${{ secrets.GCP_TOKEN }}' > gcp_token.json
 
         gcloud auth activate-service-account "${{ secrets.GCP_USER }}" --key-file gcp_token.json
         yes | gcloud auth configure-docker
