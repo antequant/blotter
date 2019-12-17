@@ -14,7 +14,7 @@ from blotter.upload import TickersTableColumn, table_name_for_contract, upload_d
 logger = getLogger(__name__)
 
 
-async def _look_up_options(
+async def look_up_options(
     ib_client: ib_insync.IB, underlying: ib_insync.Contract,
 ) -> List[ib_insync.Contract]:
     """
@@ -139,7 +139,7 @@ async def snapshot_options(
     """
 
     underlying = await qualify_contract_specifier(ib_client, underlying_specifier)
-    contracts = await _look_up_options(ib_client, underlying)
+    contracts = await look_up_options(ib_client, underlying)
     df = await _load_tickers_into_dataframe(ib_client, contracts)
 
     table_name = f"{table_name_for_contract(underlying)}_options"
