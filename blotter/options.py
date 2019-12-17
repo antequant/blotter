@@ -30,7 +30,7 @@ async def look_up_options(
     logger.info(f"Loaded {len(option_chains)} option chains for {underlying}")
 
     option_contracts = (
-        ib_insync.Option(
+        (ib_insync.FuturesOption if underlying.secType == "FUT" else ib_insync.Option)(
             symbol=underlying.symbol,
             lastTradeDateOrContractMonth=expiration,
             strike=strike,
