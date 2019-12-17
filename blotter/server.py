@@ -1,18 +1,19 @@
 import asyncio
 import concurrent.futures
-from logging import getLogger
 from datetime import datetime, timedelta, timezone
+from logging import getLogger
 from typing import Awaitable, Callable, Iterator, Optional, Tuple, TypeVar
 
 import grpc
+from google.cloud import bigquery
+
 import ib_insync
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.backfill import backfill_bars
 from blotter.error_handling import ErrorHandlerConfiguration
-from blotter.ib_helpers import IBThread
-from blotter.options import snapshot_options
+from blotter.ib_helpers import IBThread, qualify_contract_specifier
+from blotter.options import look_up_options, snapshot_options
 from blotter.streaming import StreamingID, StreamingManager
-from google.cloud import bigquery
 
 logger = getLogger(__name__)
 
@@ -197,8 +198,15 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logger.info(f"StartStreamingOptionChain: {request}")
 
         async def _start_stream(ib_client: ib_insync.IB) -> StreamingID:
-            # TODO
-            pass
+            underlying = await qualify_contract_specifier(ib_client, request.contractSpecifier)
+            options_contracts = await look_up_options(ib_client, underlying)
+
+            bar_source = request_helpers.real_time_bar_source_str(blotter_pb2.StartRealTimeDataRequest.BarSource.TRADES)
+            regular_trading_hours_only = False
+
+            ids = await asyncio.gather(*(self._streaming_manager.start_stream(ib_client, contract=contract, bar_source=bar_source, regular_trading_hours_only=regular_trading_hours_only) for contract in options_contracts))
+            return StreamingID(", ".join(ids))
+
 
         streaming_id = self._run_in_ib_thread(_start_stream).result()
         logger.debug(f"Real-time bars streaming ID: {streaming_id}")
