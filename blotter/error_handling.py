@@ -27,10 +27,14 @@ class ErrorHandler(ContextManager["ErrorHandler"]):
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> bool:
-        logging.exception(self._fmt, *self._args, **self._kwargs)
+        try:
+            if exc_value:
+                raise exc_value
+        except BaseException:
+            logging.exception(self._fmt, *self._args, **self._kwargs)
 
-        if self._report_to_gcloud:
-            google.cloud.error_reporting.Client().report_exception()
+            if self._report_to_gcloud:
+                google.cloud.error_reporting.Client().report_exception()
 
         return True
 
