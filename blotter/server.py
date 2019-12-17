@@ -188,3 +188,34 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logger.info(f"BigQuery import job launched: {job.job_id}")
 
         return blotter_pb2.SnapshotOptionChainResponse(importJobID=job.job_id)
+
+    def StartStreamingOptionChain(
+        self,
+        request: blotter_pb2.StartStreamingOptionChainRequest,
+        context: grpc.ServicerContext,
+    ) -> blotter_pb2.StartStreamingOptionChainResponse:
+        logger.info(f"StartStreamingOptionChain: {request}")
+
+        async def _start_stream(ib_client: ib_insync.IB) -> StreamingID:
+            # TODO
+            pass
+
+        streaming_id = self._run_in_ib_thread(_start_stream).result()
+        logger.debug(f"Real-time bars streaming ID: {streaming_id}")
+
+        return blotter_pb2.StartStreamingOptionChainResponse(requestID=streaming_id)
+
+    def CancelStreamingOptionChain(
+        self,
+        request: blotter_pb2.CancelStreamingOptionChainRequest,
+        context: grpc.ServicerContext,
+    ) -> blotter_pb2.CancelStreamingOptionChainResponse:
+        logger.info(f"CancelStreamingOptionChain: {request}")
+
+        async def _cancel_stream(ib_client: ib_insync.IB) -> None:
+            await self._streaming_manager.cancel_stream(
+                ib_client, streaming_id=StreamingID(request.requestID)
+            )
+
+        self._run_in_ib_thread(_cancel_stream)
+        return blotter_pb2.CancelStreamingOptionChainResponse()
