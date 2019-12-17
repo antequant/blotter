@@ -141,7 +141,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         async def _start_stream(ib_client: ib_insync.IB) -> StreamingID:
             return await self._streaming_manager.start_stream(
                 ib_client,
-                contract_specifier=request.contractSpecifier,
+                contract=request.contractSpecifier,
                 bar_source=request_helpers.real_time_bar_source_str(request.barSource),
                 regular_trading_hours_only=request.regularTradingHoursOnly,
             )

@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from datetime import timedelta
 from logging import getLogger
-from typing import Any, Dict, Iterator, NewType, Optional
+from typing import Any, Dict, Iterator, NewType, Optional, Union
 
 import ib_insync
 import pandas as pd
@@ -204,7 +204,7 @@ class StreamingManager:
     async def start_stream(
         self,
         ib_client: ib_insync.IB,
-        contract_specifier: ContractSpecifier,
+        contract: Union[ib_insync.Contract, ContractSpecifier],
         bar_source: str,
         regular_trading_hours_only: bool,
     ) -> StreamingID:
@@ -216,7 +216,8 @@ class StreamingManager:
         WARNING: This method does no checking for duplicate requests.
         """
 
-        contract = await qualify_contract_specifier(ib_client, contract_specifier)
+        if isinstance(contract, ContractSpecifier):
+            contract = await qualify_contract_specifier(ib_client, contract)
 
         streaming_job = _StreamingJob.from_contract(
             contract,
