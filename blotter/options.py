@@ -22,7 +22,7 @@ async def look_up_options(
     """
     option_chains = await ib_client.reqSecDefOptParamsAsync(
         underlyingSymbol=underlying.symbol,
-        futFopExchange=underlying.exchange if underlying.secType == "FOP" else "",
+        futFopExchange=underlying.exchange if underlying.secType == "FUT" else "",
         underlyingSecType=underlying.secType,
         underlyingConId=underlying.conId,
     )
