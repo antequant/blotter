@@ -198,15 +198,28 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logger.info(f"StartStreamingOptionChain: {request}")
 
         async def _start_stream(ib_client: ib_insync.IB) -> StreamingID:
-            underlying = await qualify_contract_specifier(ib_client, request.contractSpecifier)
+            underlying = await qualify_contract_specifier(
+                ib_client, request.contractSpecifier
+            )
             options_contracts = await look_up_options(ib_client, underlying)
 
-            bar_source = request_helpers.real_time_bar_source_str(blotter_pb2.StartRealTimeDataRequest.BarSource.TRADES)
+            bar_source = request_helpers.real_time_bar_source_str(
+                blotter_pb2.StartRealTimeDataRequest.BarSource.TRADES
+            )
             regular_trading_hours_only = False
 
-            ids = await asyncio.gather(*(self._streaming_manager.start_stream(ib_client, contract=contract, bar_source=bar_source, regular_trading_hours_only=regular_trading_hours_only) for contract in options_contracts))
+            ids = await asyncio.gather(
+                *(
+                    self._streaming_manager.start_stream(
+                        ib_client,
+                        contract=contract,
+                        bar_source=bar_source,
+                        regular_trading_hours_only=regular_trading_hours_only,
+                    )
+                    for contract in options_contracts
+                )
+            )
             return StreamingID(", ".join(ids))
-
 
         streaming_id = self._run_in_ib_thread(_start_stream).result()
         logger.debug(f"Real-time bars streaming ID: {streaming_id}")

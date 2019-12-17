@@ -139,12 +139,14 @@ stop_parser = subparsers.add_parser(
 stop_parser.add_argument("request_id", help="The streaming request to cancel")
 
 options_parser = subparsers.add_parser(
-    'options',
+    "options",
     help="Options-specific blotting commands",
     formatter_class=ArgumentDefaultsHelpFormatter,
 )
 
-options_subparsers = options_parser.add_subparsers(dest="options_command", help="What to do")
+options_subparsers = options_parser.add_subparsers(
+    dest="options_command", help="What to do"
+)
 
 snapshot_options_parser = options_subparsers.add_parser(
     "snapshot",
@@ -153,18 +155,21 @@ snapshot_options_parser = options_subparsers.add_parser(
 )
 
 start_streaming_options_parser = options_subparsers.add_parser(
-    'start',
+    "start",
     help="Start streaming options data",
     formatter_class=ArgumentDefaultsHelpFormatter,
 )
 
 stop_streaming_options_parser = options_subparsers.add_parser(
-    'stop',
+    "stop",
     help="Stop streaming options data",
     formatter_class=ArgumentDefaultsHelpFormatter,
 )
 
-stop_streaming_options_parser.add_argument("request_id", help="The streaming request to cancel")
+stop_streaming_options_parser.add_argument(
+    "request_id", help="The streaming request to cancel"
+)
+
 
 def contract_specifier_from_args(args: Namespace) -> blotter_pb2.ContractSpecifier:
     type_mapping = {
@@ -259,7 +264,10 @@ def snapshot_options(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> Non
     response = stub.SnapshotOptionChain(request)
     logging.info(f"Importing option chain with job ID: {response.importJobID}")
 
-def start_options_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
+
+def start_options_streaming(
+    stub: blotter_pb2_grpc.BlotterStub, args: Namespace
+) -> None:
     request = blotter_pb2.StartStreamingOptionChainRequest(
         contractSpecifier=contract_specifier_from_args(args),
     )
@@ -285,6 +293,7 @@ def handle_options_command(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) 
     }
 
     commands[args.options_command](stub, args)
+
 
 def main() -> None:
     args = parser.parse_args()
