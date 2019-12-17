@@ -44,6 +44,20 @@ class _StreamingJob:
     use_regular_trading_hours: bool
     """Argument to `ib_insync.IB.reqRealTimeBars`."""
 
+    @classmethod
+    def from_contract(
+        cls,
+        contract: ib_insync.Contract,
+        bar_source: str,
+        regular_trading_hours_only: bool,
+    ) -> "_StreamingJob":
+        return cls(
+            serialized_contract=serialize_contract(contract),
+            bar_size=5,
+            what_to_show=bar_source,
+            use_regular_trading_hours=regular_trading_hours_only,
+        )
+
     def start_request(self, ib_client: ib_insync.IB) -> ib_insync.RealTimeBarList:
         """
         Submits this streaming request to the given IB client.
@@ -204,11 +218,10 @@ class StreamingManager:
 
         contract = await qualify_contract_specifier(ib_client, contract_specifier)
 
-        streaming_job = _StreamingJob(
-            serialized_contract=serialize_contract(contract),
-            bar_size=5,
-            what_to_show=bar_source,
-            use_regular_trading_hours=regular_trading_hours_only,
+        streaming_job = _StreamingJob.from_contract(
+            contract,
+            bar_source=bar_source,
+            regular_trading_hours_only=regular_trading_hours_only,
         )
 
         streaming_id = self._record_job_in_firestore(streaming_job)
