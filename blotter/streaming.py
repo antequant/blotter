@@ -193,7 +193,9 @@ class StreamingManager:
         Returns the final `RealTimeBarList` associated with this ID, if it could be found.
         """
 
-        logger.debug(f"_real_time_bars before cancelling: {self._real_time_bars}")
+        logger.debug(
+            f"{len(self._real_time_bars)} _real_time_bars before cancelling: {self._real_time_bars.keys()}"
+        )
         bar_list = self._real_time_bars.pop(streaming_id, None)
         if bar_list is not None:
             ib_client.cancelRealTimeBars(bar_list)
@@ -318,7 +320,9 @@ class StreamingManager:
         bar_list = streaming_job.start_request(ib_client)
 
         self._real_time_bars[streaming_id] = bar_list
-        logger.debug(f"_real_time_bars: {self._real_time_bars}")
+        logger.debug(
+            f"{len(self._real_time_bars)} _real_time_bars: {self._real_time_bars.keys()}"
+        )
 
         bar_list.updateEvent += _bars_updated
 
