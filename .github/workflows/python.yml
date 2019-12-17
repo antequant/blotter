@@ -57,7 +57,6 @@ jobs:
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u "${{ github.actor }}" --password-stdin
   
     - name: Push image to GitHub Package Registry
-      if: github.event_name == 'push'
       run: |
         IMAGE_NAME=$(basename "${{ github.repository }}")
         GPR_IMAGE_ID="docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME"
@@ -88,7 +87,7 @@ jobs:
         yes | gcloud auth configure-docker
     
     - name: Push image to Google Container Registry
-      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/master'
       run: |
         GCP_IMAGE_ID="gcr.io/$GCP_PROJECT/$GCP_IMAGE_NAME"
 
