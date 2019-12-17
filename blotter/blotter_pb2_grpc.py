@@ -82,8 +82,9 @@ class BlotterServicer(object):
     raise NotImplementedError('Method not implemented!')
 
   def SnapshotOptionChain(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """
+    Loads the option chain for an underlying contract, pulls quotes for every options contract, then enqueues a job to import them into the appropriate BigQuery table.
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')

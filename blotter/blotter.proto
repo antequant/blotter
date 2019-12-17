@@ -203,11 +203,19 @@ message HealthCheckRequest {}
 // See the Blotter service below.
 message HealthCheckResponse {}
 
+// See the Blotter service below.
 message SnapshotOptionChainRequest {
+    /*
+     * A description of the underlying contract to snapshot the options chain of.
+     */
     ContractSpecifier contractSpecifier = 1;
 }
 
+// See the Blotter service below.
 message SnapshotOptionChainResponse {
+    /*
+     * A unique ID for the BigQuery data import job that was created.
+     */
     string importJobID = 1;
 }
 
@@ -237,5 +245,8 @@ service Blotter {
      */
     rpc CancelRealTimeData(CancelRealTimeDataRequest) returns (CancelRealTimeDataResponse) {}
 
+    /*
+     * Loads the option chain for an underlying contract, pulls quotes for every options contract, then enqueues a job to import them into the appropriate BigQuery table.
+     */
     rpc SnapshotOptionChain(SnapshotOptionChainRequest) returns (SnapshotOptionChainResponse) {}
 }
