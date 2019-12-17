@@ -1,7 +1,7 @@
 import asyncio
 import concurrent.futures
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from decimal import Decimal
 from typing import (
     Any,
@@ -59,7 +59,7 @@ async def qualify_contract_specifier(
 
 
 def serialize_contract(contract: Contract) -> Dict[str, Any]:
-    return {key: getattr(contract, key) for key in Contract.__slots__}
+    return asdict(contract)
 
 
 def deserialize_contract(d: Dict[str, Any]) -> Contract:
