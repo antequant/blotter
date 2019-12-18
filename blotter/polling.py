@@ -54,6 +54,9 @@ class _PollingJob:
     def contracts(self) -> Iterable[ib_insync.Contract]:
         return (deserialize_contract(d) for d in self.serialized_contracts)
 
+    def __str__(self) -> str:
+        return f"PollingJob: {len(self.serialized_contracts)} contracts, polling every {self.polling_interval}, uploading to {self.upload_table_name}"
+
 
 class PollingManager:
     """
