@@ -1,3 +1,4 @@
+from datetime import timedelta
 from logging import getLogger
 from typing import List
 
@@ -7,6 +8,7 @@ import ib_insync
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import qualify_contract_specifier
+from blotter.polling import PollingID, PollingManager
 from blotter.tickers import load_tickers_into_dataframe
 from blotter.upload import table_name_for_contract, upload_dataframe
 
@@ -54,6 +56,14 @@ async def look_up_options(
     return qualified_contracts
 
 
+def _table_name_for_options(underlying: ib_insync.Contract) -> str:
+    """
+    Determines the appropriate BigQuery table name to use for options data associated with the given underlying.
+    """
+
+    return f"{table_name_for_contract(underlying)}_options"
+
+
 async def snapshot_options(
     ib_client: ib_insync.IB,
     underlying_specifier: ContractSpecifier,
@@ -68,6 +78,26 @@ async def snapshot_options(
     underlying = await qualify_contract_specifier(ib_client, underlying_specifier)
     contracts = await look_up_options(ib_client, underlying)
     df = await load_tickers_into_dataframe(ib_client, contracts)
+    return upload_dataframe(_table_name_for_options(underlying), df, error_handler)
 
-    table_name = f"{table_name_for_contract(underlying)}_options"
-    return upload_dataframe(table_name, df, error_handler)
+
+async def start_polling_options(
+    polling_manager: PollingManager,
+    polling_interval: timedelta,
+    ib_client: ib_insync.IB,
+    underlying_specifier: ContractSpecifier,
+) -> PollingID:
+    """
+    Loads the options chain for the given contract specifier, then starts polling for market data on each options contract on the provided interval.
+
+    Returns the ID of the polling job.
+    """
+
+    underlying = await qualify_contract_specifier(ib_client, underlying_specifier)
+    contracts = await look_up_options(ib_client, underlying)
+    return await polling_manager.start_polling(
+        ib_client,
+        contracts,
+        polling_interval=polling_interval,
+        upload_table_name=_table_name_for_options(underlying),
+    )
