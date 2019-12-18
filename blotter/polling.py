@@ -179,7 +179,7 @@ class PollingManager:
                 try:
                     while True:
                         logger.info(f"Fetching tickers for {len(contracts)} contracts")
-                        df = load_tickers_into_dataframe(ib_client, contracts)
+                        df = await load_tickers_into_dataframe(ib_client, contracts)
                         logger.debug(df)
 
                         job = upload_dataframe(
