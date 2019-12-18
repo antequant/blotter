@@ -80,6 +80,7 @@ class PollingManager:
 
         self._firestore_db = firestore.Client()
         self._error_handler = error_handler
+        self._polling_tasks = {}
         super().__init__()
 
     @property
