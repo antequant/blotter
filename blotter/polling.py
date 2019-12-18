@@ -60,7 +60,7 @@ class PollingManager:
     Manages periodic polling of market data.
     """
 
-    DEFAULT_POLLING_INTERVAL = timedelta(minutes=1)
+    DEFAULT_POLLING_INTERVAL = timedelta(minutes=5)
     """The default length of time we should wait between market data polling. In other words, how old the data is permitted to be."""
 
     _FIRESTORE_COLLECTION = "polling_jobs"
@@ -121,6 +121,7 @@ class PollingManager:
         self._delete_job_from_firestore(polling_id)
         logger.info(f"Cancelled polling for job ID {polling_id}")
 
+    # TODO: Support some concept of trading hours, because this will be super wasteful for equity options otherwise
     async def start_polling(
         self,
         ib_client: ib_insync.IB,
