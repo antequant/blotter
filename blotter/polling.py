@@ -192,6 +192,9 @@ class PollingManager:
                         logger.info(f"{polling_id} polling again at {next_wake_up}")
 
                         await ib_insync.util.waitUntilAsync(next_wake_up)
+                except asyncio.CancelledError:
+                    # Don't rethrow this, because we don't want it logged
+                    await self.cancel_polling(ib_client, polling_id)
                 except Exception:
                     await self.cancel_polling(ib_client, polling_id)
                     raise
