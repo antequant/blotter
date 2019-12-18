@@ -6,10 +6,11 @@ from datetime import timedelta
 from logging import getLogger
 from typing import Any, Dict, Iterator, NewType, Optional, Union
 
-import ib_insync
 import pandas as pd
 from google.cloud import firestore
 
+import blotter.bigquery_helpers as bigquery_helpers
+import ib_insync
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import (
@@ -76,12 +77,6 @@ class StreamingManager:
     Manages the lifetime of market data streaming requests.
     """
 
-    _MAX_BIGQUERY_OPERATIONS_PER_DAY = 1000
-    """The maximum number of BigQuery operations permitted per table per day."""
-
-    _PERMITTED_OPERATIONS_PER_DAY = _MAX_BIGQUERY_OPERATIONS_PER_DAY * 0.5
-    """How much of the BigQuery operations allowance to actually use, to leave headroom for other things."""
-
     _BAR_SIZE = timedelta(seconds=5)
     """The granularity of real-time data bars, and (while streaming) how quickly they arrive."""
 
@@ -89,7 +84,7 @@ class StreamingManager:
     """The maximum number of real-time data bars that could be reasonably expected in one day."""
 
     DEFAULT_BATCH_SIZE = math.ceil(
-        _MAXIMUM_BARS_PER_DAY / _PERMITTED_OPERATIONS_PER_DAY
+        _MAXIMUM_BARS_PER_DAY / bigquery_helpers.PERMITTED_OPERATIONS_PER_DAY
     )
     """A reasonable default number of bars to batch together for upload."""
 
