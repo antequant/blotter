@@ -97,7 +97,9 @@ class PollingManager:
         doc = self._firestore_collection.document()
         logger.debug(f"Recording polling job with ID {doc.id}: {job}")
 
-        doc.set(dataclasses.asdict(job))
+        # TODO: Fix timedelta serialization
+        # doc.set(dataclasses.asdict(job))
+
         return PollingID(doc.id)
 
     def _delete_job_from_firestore(self, job_id: PollingID) -> None:
