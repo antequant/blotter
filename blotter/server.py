@@ -202,9 +202,13 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         logger.info(f"StartStreamingOptionChain: {request}")
 
         async def _start_polling(ib_client: ib_insync.IB) -> PollingID:
+            polling_interval = PollingManager.DEFAULT_POLLING_INTERVAL
+            if request.pollingInterval:
+                polling_interval = timedelta(seconds=request.pollingInterval)
+
             return await start_polling_options(
                 self._polling_manager,
-                PollingManager.DEFAULT_POLLING_INTERVAL,
+                polling_interval,
                 ib_client,
                 request.contractSpecifier,
             )

@@ -160,6 +160,12 @@ start_streaming_options_parser = options_subparsers.add_parser(
     formatter_class=ArgumentDefaultsHelpFormatter,
 )
 
+start_streaming_options_parser.add_argument(
+    "--polling-interval",
+    help="Interval (in seconds) at which to poll options data",
+    type=int,
+)
+
 stop_streaming_options_parser = options_subparsers.add_parser(
     "stop",
     help="Stop streaming options data",
@@ -271,6 +277,9 @@ def start_options_streaming(
     request = blotter_pb2.StartStreamingOptionChainRequest(
         contractSpecifier=contract_specifier_from_args(args),
     )
+
+    if args.polling_interval:
+        request.pollingInterval = args.polling_interval
 
     logging.info(f"StartStreamingOptionChain: {request}")
 

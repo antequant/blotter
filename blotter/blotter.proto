@@ -225,6 +225,11 @@ message StartStreamingOptionChainRequest {
      * A description of the underlying contract for the options chain to stream data of.
      */
     ContractSpecifier contractSpecifier = 1;
+
+    /*
+     * The interval (in seconds) at which to poll options data.
+     */
+    int64 pollingInterval = 2;
 }
 
 // See the Blotter service below.
