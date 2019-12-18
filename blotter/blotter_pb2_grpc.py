@@ -40,6 +40,16 @@ class BlotterStub(object):
         request_serializer=blotter_dot_blotter__pb2.SnapshotOptionChainRequest.SerializeToString,
         response_deserializer=blotter_dot_blotter__pb2.SnapshotOptionChainResponse.FromString,
         )
+    self.StartStreamingOptionChain = channel.unary_unary(
+        '/blotter.Blotter/StartStreamingOptionChain',
+        request_serializer=blotter_dot_blotter__pb2.StartStreamingOptionChainRequest.SerializeToString,
+        response_deserializer=blotter_dot_blotter__pb2.StartStreamingOptionChainResponse.FromString,
+        )
+    self.CancelStreamingOptionChain = channel.unary_unary(
+        '/blotter.Blotter/CancelStreamingOptionChain',
+        request_serializer=blotter_dot_blotter__pb2.CancelStreamingOptionChainRequest.SerializeToString,
+        response_deserializer=blotter_dot_blotter__pb2.CancelStreamingOptionChainResponse.FromString,
+        )
 
 
 class BlotterServicer(object):
@@ -82,8 +92,27 @@ class BlotterServicer(object):
     raise NotImplementedError('Method not implemented!')
 
   def SnapshotOptionChain(self, request, context):
-    # missing associated documentation comment in .proto file
-    pass
+    """
+    Loads the option chain for an underlying contract, pulls quotes for every options contract, then enqueues a job to import them into the appropriate BigQuery table.
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def StartStreamingOptionChain(self, request, context):
+    """
+    Streams periodic quotes for the option chain of an underlying contract into the appropriate BigQuery table.
+
+    No guarantees are made about the latency of the BigQuery import, so this is not suitable for hard-real-time trading use cases.
+    """
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def CancelStreamingOptionChain(self, request, context):
+    """
+    Cancels a previous real-time data subscription. Any outstanding BigQuery uploads will still complete.
+    """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
@@ -115,6 +144,16 @@ def add_BlotterServicer_to_server(servicer, server):
           servicer.SnapshotOptionChain,
           request_deserializer=blotter_dot_blotter__pb2.SnapshotOptionChainRequest.FromString,
           response_serializer=blotter_dot_blotter__pb2.SnapshotOptionChainResponse.SerializeToString,
+      ),
+      'StartStreamingOptionChain': grpc.unary_unary_rpc_method_handler(
+          servicer.StartStreamingOptionChain,
+          request_deserializer=blotter_dot_blotter__pb2.StartStreamingOptionChainRequest.FromString,
+          response_serializer=blotter_dot_blotter__pb2.StartStreamingOptionChainResponse.SerializeToString,
+      ),
+      'CancelStreamingOptionChain': grpc.unary_unary_rpc_method_handler(
+          servicer.CancelStreamingOptionChain,
+          request_deserializer=blotter_dot_blotter__pb2.CancelStreamingOptionChainRequest.FromString,
+          response_serializer=blotter_dot_blotter__pb2.CancelStreamingOptionChainResponse.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

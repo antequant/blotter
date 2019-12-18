@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   package='blotter',
   syntax='proto3',
   serialized_options=None,
-  serialized_pb=_b('\n\x15\x62lotter/blotter.proto\x12\x07\x62lotter\"\xbb\x04\n\x11\x43ontractSpecifier\x12\x0e\n\x06symbol\x18\x01 \x01(\t\x12=\n\x0csecurityType\x18\x02 \x01(\x0e\x32\'.blotter.ContractSpecifier.SecurityType\x12$\n\x1clastTradeDateOrContractMonth\x18\x03 \x01(\t\x12\x0e\n\x06strike\x18\x04 \x01(\t\x12/\n\x05right\x18\x05 \x01(\x0e\x32 .blotter.ContractSpecifier.Right\x12\x12\n\nmultiplier\x18\x06 \x01(\t\x12\x10\n\x08\x65xchange\x18\x07 \x01(\t\x12\x10\n\x08\x63urrency\x18\x08 \x01(\t\x12\x13\n\x0blocalSymbol\x18\t \x01(\t\x12\x17\n\x0fprimaryExchange\x18\n \x01(\t\x12\x14\n\x0ctradingClass\x18\x0b \x01(\t\x12\x16\n\x0eincludeExpired\x18\x0c \x01(\x08\"\xa8\x01\n\x0cSecurityType\x12\t\n\x05STOCK\x10\x00\x12\n\n\x06OPTION\x10\x01\x12\n\n\x06\x46UTURE\x10\x02\x12\t\n\x05INDEX\x10\x03\x12\x12\n\x0e\x46UTURES_OPTION\x10\x04\x12\x08\n\x04\x43\x41SH\x10\x05\x12\x07\n\x03\x43\x46\x44\x10\x06\x12\t\n\x05\x43OMBO\x10\x07\x12\x0b\n\x07WARRANT\x10\x08\x12\x08\n\x04\x42OND\x10\t\x12\r\n\tCOMMODITY\x10\n\x12\x08\n\x04NEWS\x10\x0b\x12\x08\n\x04\x46UND\x10\x0c\"1\n\x05Right\x12\x15\n\x11UNSPECIFIED_RIGHT\x10\x00\x12\x07\n\x03PUT\x10\x01\x12\x08\n\x04\x43\x41LL\x10\x02\"\x88\x01\n\x08\x44uration\x12\r\n\x05\x63ount\x18\x01 \x01(\x05\x12(\n\x04unit\x18\x02 \x01(\x0e\x32\x1a.blotter.Duration.TimeUnit\"C\n\x08TimeUnit\x12\x0b\n\x07SECONDS\x10\x00\x12\x08\n\x04\x44\x41YS\x10\x01\x12\t\n\x05WEEKS\x10\x02\x12\n\n\x06MONTHS\x10\x03\x12\t\n\x05YEARS\x10\x04\"\xd9\x07\n\x19LoadHistoricalDataRequest\x12\x35\n\x11\x63ontractSpecifier\x18\x01 \x01(\x0b\x32\x1a.blotter.ContractSpecifier\x12\x17\n\x0f\x65ndTimestampUTC\x18\x02 \x01(\x03\x12#\n\x08\x64uration\x18\x03 \x01(\x0b\x32\x11.blotter.Duration\x12;\n\x07\x62\x61rSize\x18\x04 \x01(\x0e\x32*.blotter.LoadHistoricalDataRequest.BarSize\x12?\n\tbarSource\x18\x05 \x01(\x0e\x32,.blotter.LoadHistoricalDataRequest.BarSource\x12\x1f\n\x17regularTradingHoursOnly\x18\x06 \x01(\x08\"\x9b\x03\n\x07\x42\x61rSize\x12\x14\n\x10UNSPECIFIED_SIZE\x10\x00\x12\x0e\n\nONE_SECOND\x10\x01\x12\x10\n\x0c\x46IVE_SECONDS\x10\x05\x12\x0f\n\x0bTEN_SECONDS\x10\n\x12\x13\n\x0f\x46IFTEEN_SECONDS\x10\x0f\x12\x12\n\x0eTHIRTY_SECONDS\x10\x1e\x12\x0e\n\nONE_MINUTE\x10<\x12\x0f\n\x0bTWO_MINUTES\x10x\x12\x12\n\rTHREE_MINUTES\x10\xb4\x01\x12\x11\n\x0c\x46IVE_MINUTES\x10\xac\x02\x12\x10\n\x0bTEN_MINUTES\x10\xd8\x04\x12\x14\n\x0f\x46IFTEEN_MINUTES\x10\x84\x07\x12\x13\n\x0eTWENTY_MINUTES\x10\xb0\t\x12\x13\n\x0eTHIRTY_MINUTES\x10\x88\x0e\x12\r\n\x08ONE_HOUR\x10\x90\x1c\x12\x0e\n\tTWO_HOURS\x10\xa0\x38\x12\x10\n\x0bTHREE_HOURS\x10\xb0T\x12\x0f\n\nFOUR_HOURS\x10\xc0p\x12\x11\n\x0b\x45IGHT_HOURS\x10\x80\xe1\x01\x12\r\n\x07ONE_DAY\x10\x80\xa3\x05\x12\x0e\n\x08ONE_WEEK\x10\x80\xf5$\x12\x10\n\tONE_MONTH\x10\x80\x9a\x9e\x01\"\x89\x02\n\tBarSource\x12\x16\n\x12UNSPECIFIED_SOURCE\x10\x00\x12\n\n\x06TRADES\x10\x01\x12\x0c\n\x08MIDPOINT\x10\x02\x12\x07\n\x03\x42ID\x10\x03\x12\x07\n\x03\x41SK\x10\x04\x12\x0b\n\x07\x42ID_ASK\x10\x05\x12\x11\n\rADJUSTED_LAST\x10\x06\x12\x19\n\x15HISTORICAL_VOLATILITY\x10\x07\x12\x1d\n\x19OPTION_IMPLIED_VOLATILITY\x10\x08\x12\x0f\n\x0bREBATE_RATE\x10\t\x12\x0c\n\x08\x46\x45\x45_RATE\x10\n\x12\r\n\tYIELD_BID\x10\x0b\x12\r\n\tYIELD_ASK\x10\x0c\x12\x11\n\rYIELD_BID_ASK\x10\r\x12\x0e\n\nYIELD_LAST\x10\x0e\"3\n\x1aLoadHistoricalDataResponse\x12\x15\n\rbackfillJobID\x18\x01 \x01(\t\"\x83\x02\n\x18StartRealTimeDataRequest\x12\x35\n\x11\x63ontractSpecifier\x18\x01 \x01(\x0b\x32\x1a.blotter.ContractSpecifier\x12>\n\tbarSource\x18\x02 \x01(\x0e\x32+.blotter.StartRealTimeDataRequest.BarSource\x12\x1f\n\x17regularTradingHoursOnly\x18\x03 \x01(\x08\"O\n\tBarSource\x12\x16\n\x12UNSPECIFIED_SOURCE\x10\x00\x12\n\n\x06TRADES\x10\x01\x12\x0c\n\x08MIDPOINT\x10\x02\x12\x07\n\x03\x42ID\x10\x03\x12\x07\n\x03\x41SK\x10\x04\".\n\x19StartRealTimeDataResponse\x12\x11\n\trequestID\x18\x01 \x01(\t\".\n\x19\x43\x61ncelRealTimeDataRequest\x12\x11\n\trequestID\x18\x01 \x01(\t\"\x1c\n\x1a\x43\x61ncelRealTimeDataResponse\"\x14\n\x12HealthCheckRequest\"\x15\n\x13HealthCheckResponse\"S\n\x1aSnapshotOptionChainRequest\x12\x35\n\x11\x63ontractSpecifier\x18\x01 \x01(\x0b\x32\x1a.blotter.ContractSpecifier\"2\n\x1bSnapshotOptionChainResponse\x12\x13\n\x0bimportJobID\x18\x01 \x01(\t2\xdb\x03\n\x07\x42lotter\x12J\n\x0bHealthCheck\x12\x1b.blotter.HealthCheckRequest\x1a\x1c.blotter.HealthCheckResponse\"\x00\x12\x61\n\x12LoadHistoricalData\x12\".blotter.LoadHistoricalDataRequest\x1a#.blotter.LoadHistoricalDataResponse\"\x00\x30\x01\x12\\\n\x11StartRealTimeData\x12!.blotter.StartRealTimeDataRequest\x1a\".blotter.StartRealTimeDataResponse\"\x00\x12_\n\x12\x43\x61ncelRealTimeData\x12\".blotter.CancelRealTimeDataRequest\x1a#.blotter.CancelRealTimeDataResponse\"\x00\x12\x62\n\x13SnapshotOptionChain\x12#.blotter.SnapshotOptionChainRequest\x1a$.blotter.SnapshotOptionChainResponse\"\x00\x62\x06proto3')
+  serialized_pb=_b('\n\x15\x62lotter/blotter.proto\x12\x07\x62lotter\"\xbb\x04\n\x11\x43ontractSpecifier\x12\x0e\n\x06symbol\x18\x01 \x01(\t\x12=\n\x0csecurityType\x18\x02 \x01(\x0e\x32\'.blotter.ContractSpecifier.SecurityType\x12$\n\x1clastTradeDateOrContractMonth\x18\x03 \x01(\t\x12\x0e\n\x06strike\x18\x04 \x01(\t\x12/\n\x05right\x18\x05 \x01(\x0e\x32 .blotter.ContractSpecifier.Right\x12\x12\n\nmultiplier\x18\x06 \x01(\t\x12\x10\n\x08\x65xchange\x18\x07 \x01(\t\x12\x10\n\x08\x63urrency\x18\x08 \x01(\t\x12\x13\n\x0blocalSymbol\x18\t \x01(\t\x12\x17\n\x0fprimaryExchange\x18\n \x01(\t\x12\x14\n\x0ctradingClass\x18\x0b \x01(\t\x12\x16\n\x0eincludeExpired\x18\x0c \x01(\x08\"\xa8\x01\n\x0cSecurityType\x12\t\n\x05STOCK\x10\x00\x12\n\n\x06OPTION\x10\x01\x12\n\n\x06\x46UTURE\x10\x02\x12\t\n\x05INDEX\x10\x03\x12\x12\n\x0e\x46UTURES_OPTION\x10\x04\x12\x08\n\x04\x43\x41SH\x10\x05\x12\x07\n\x03\x43\x46\x44\x10\x06\x12\t\n\x05\x43OMBO\x10\x07\x12\x0b\n\x07WARRANT\x10\x08\x12\x08\n\x04\x42OND\x10\t\x12\r\n\tCOMMODITY\x10\n\x12\x08\n\x04NEWS\x10\x0b\x12\x08\n\x04\x46UND\x10\x0c\"1\n\x05Right\x12\x15\n\x11UNSPECIFIED_RIGHT\x10\x00\x12\x07\n\x03PUT\x10\x01\x12\x08\n\x04\x43\x41LL\x10\x02\"\x88\x01\n\x08\x44uration\x12\r\n\x05\x63ount\x18\x01 \x01(\x05\x12(\n\x04unit\x18\x02 \x01(\x0e\x32\x1a.blotter.Duration.TimeUnit\"C\n\x08TimeUnit\x12\x0b\n\x07SECONDS\x10\x00\x12\x08\n\x04\x44\x41YS\x10\x01\x12\t\n\x05WEEKS\x10\x02\x12\n\n\x06MONTHS\x10\x03\x12\t\n\x05YEARS\x10\x04\"\xd9\x07\n\x19LoadHistoricalDataRequest\x12\x35\n\x11\x63ontractSpecifier\x18\x01 \x01(\x0b\x32\x1a.blotter.ContractSpecifier\x12\x17\n\x0f\x65ndTimestampUTC\x18\x02 \x01(\x03\x12#\n\x08\x64uration\x18\x03 \x01(\x0b\x32\x11.blotter.Duration\x12;\n\x07\x62\x61rSize\x18\x04 \x01(\x0e\x32*.blotter.LoadHistoricalDataRequest.BarSize\x12?\n\tbarSource\x18\x05 \x01(\x0e\x32,.blotter.LoadHistoricalDataRequest.BarSource\x12\x1f\n\x17regularTradingHoursOnly\x18\x06 \x01(\x08\"\x9b\x03\n\x07\x42\x61rSize\x12\x14\n\x10UNSPECIFIED_SIZE\x10\x00\x12\x0e\n\nONE_SECOND\x10\x01\x12\x10\n\x0c\x46IVE_SECONDS\x10\x05\x12\x0f\n\x0bTEN_SECONDS\x10\n\x12\x13\n\x0f\x46IFTEEN_SECONDS\x10\x0f\x12\x12\n\x0eTHIRTY_SECONDS\x10\x1e\x12\x0e\n\nONE_MINUTE\x10<\x12\x0f\n\x0bTWO_MINUTES\x10x\x12\x12\n\rTHREE_MINUTES\x10\xb4\x01\x12\x11\n\x0c\x46IVE_MINUTES\x10\xac\x02\x12\x10\n\x0bTEN_MINUTES\x10\xd8\x04\x12\x14\n\x0f\x46IFTEEN_MINUTES\x10\x84\x07\x12\x13\n\x0eTWENTY_MINUTES\x10\xb0\t\x12\x13\n\x0eTHIRTY_MINUTES\x10\x88\x0e\x12\r\n\x08ONE_HOUR\x10\x90\x1c\x12\x0e\n\tTWO_HOURS\x10\xa0\x38\x12\x10\n\x0bTHREE_HOURS\x10\xb0T\x12\x0f\n\nFOUR_HOURS\x10\xc0p\x12\x11\n\x0b\x45IGHT_HOURS\x10\x80\xe1\x01\x12\r\n\x07ONE_DAY\x10\x80\xa3\x05\x12\x0e\n\x08ONE_WEEK\x10\x80\xf5$\x12\x10\n\tONE_MONTH\x10\x80\x9a\x9e\x01\"\x89\x02\n\tBarSource\x12\x16\n\x12UNSPECIFIED_SOURCE\x10\x00\x12\n\n\x06TRADES\x10\x01\x12\x0c\n\x08MIDPOINT\x10\x02\x12\x07\n\x03\x42ID\x10\x03\x12\x07\n\x03\x41SK\x10\x04\x12\x0b\n\x07\x42ID_ASK\x10\x05\x12\x11\n\rADJUSTED_LAST\x10\x06\x12\x19\n\x15HISTORICAL_VOLATILITY\x10\x07\x12\x1d\n\x19OPTION_IMPLIED_VOLATILITY\x10\x08\x12\x0f\n\x0bREBATE_RATE\x10\t\x12\x0c\n\x08\x46\x45\x45_RATE\x10\n\x12\r\n\tYIELD_BID\x10\x0b\x12\r\n\tYIELD_ASK\x10\x0c\x12\x11\n\rYIELD_BID_ASK\x10\r\x12\x0e\n\nYIELD_LAST\x10\x0e\"3\n\x1aLoadHistoricalDataResponse\x12\x15\n\rbackfillJobID\x18\x01 \x01(\t\"\x83\x02\n\x18StartRealTimeDataRequest\x12\x35\n\x11\x63ontractSpecifier\x18\x01 \x01(\x0b\x32\x1a.blotter.ContractSpecifier\x12>\n\tbarSource\x18\x02 \x01(\x0e\x32+.blotter.StartRealTimeDataRequest.BarSource\x12\x1f\n\x17regularTradingHoursOnly\x18\x03 \x01(\x08\"O\n\tBarSource\x12\x16\n\x12UNSPECIFIED_SOURCE\x10\x00\x12\n\n\x06TRADES\x10\x01\x12\x0c\n\x08MIDPOINT\x10\x02\x12\x07\n\x03\x42ID\x10\x03\x12\x07\n\x03\x41SK\x10\x04\".\n\x19StartRealTimeDataResponse\x12\x11\n\trequestID\x18\x01 \x01(\t\".\n\x19\x43\x61ncelRealTimeDataRequest\x12\x11\n\trequestID\x18\x01 \x01(\t\"\x1c\n\x1a\x43\x61ncelRealTimeDataResponse\"\x14\n\x12HealthCheckRequest\"\x15\n\x13HealthCheckResponse\"S\n\x1aSnapshotOptionChainRequest\x12\x35\n\x11\x63ontractSpecifier\x18\x01 \x01(\x0b\x32\x1a.blotter.ContractSpecifier\"2\n\x1bSnapshotOptionChainResponse\x12\x13\n\x0bimportJobID\x18\x01 \x01(\t\"r\n StartStreamingOptionChainRequest\x12\x35\n\x11\x63ontractSpecifier\x18\x01 \x01(\x0b\x32\x1a.blotter.ContractSpecifier\x12\x17\n\x0fpollingInterval\x18\x02 \x01(\x03\"6\n!StartStreamingOptionChainResponse\x12\x11\n\trequestID\x18\x01 \x01(\t\"6\n!CancelStreamingOptionChainRequest\x12\x11\n\trequestID\x18\x01 \x01(\t\"$\n\"CancelStreamingOptionChainResponse2\xca\x05\n\x07\x42lotter\x12J\n\x0bHealthCheck\x12\x1b.blotter.HealthCheckRequest\x1a\x1c.blotter.HealthCheckResponse\"\x00\x12\x61\n\x12LoadHistoricalData\x12\".blotter.LoadHistoricalDataRequest\x1a#.blotter.LoadHistoricalDataResponse\"\x00\x30\x01\x12\\\n\x11StartRealTimeData\x12!.blotter.StartRealTimeDataRequest\x1a\".blotter.StartRealTimeDataResponse\"\x00\x12_\n\x12\x43\x61ncelRealTimeData\x12\".blotter.CancelRealTimeDataRequest\x1a#.blotter.CancelRealTimeDataResponse\"\x00\x12\x62\n\x13SnapshotOptionChain\x12#.blotter.SnapshotOptionChainRequest\x1a$.blotter.SnapshotOptionChainResponse\"\x00\x12t\n\x19StartStreamingOptionChain\x12).blotter.StartStreamingOptionChainRequest\x1a*.blotter.StartStreamingOptionChainResponse\"\x00\x12w\n\x1a\x43\x61ncelStreamingOptionChain\x12*.blotter.CancelStreamingOptionChainRequest\x1a+.blotter.CancelStreamingOptionChainResponse\"\x00\x62\x06proto3')
 )
 
 
@@ -851,6 +851,130 @@ _SNAPSHOTOPTIONCHAINRESPONSE = _descriptor.Descriptor(
   serialized_end=2356,
 )
 
+
+_STARTSTREAMINGOPTIONCHAINREQUEST = _descriptor.Descriptor(
+  name='StartStreamingOptionChainRequest',
+  full_name='blotter.StartStreamingOptionChainRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='contractSpecifier', full_name='blotter.StartStreamingOptionChainRequest.contractSpecifier', index=0,
+      number=1, type=11, cpp_type=10, label=1,
+      has_default_value=False, default_value=None,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='pollingInterval', full_name='blotter.StartStreamingOptionChainRequest.pollingInterval', index=1,
+      number=2, type=3, cpp_type=2, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2358,
+  serialized_end=2472,
+)
+
+
+_STARTSTREAMINGOPTIONCHAINRESPONSE = _descriptor.Descriptor(
+  name='StartStreamingOptionChainResponse',
+  full_name='blotter.StartStreamingOptionChainResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='requestID', full_name='blotter.StartStreamingOptionChainResponse.requestID', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2474,
+  serialized_end=2528,
+)
+
+
+_CANCELSTREAMINGOPTIONCHAINREQUEST = _descriptor.Descriptor(
+  name='CancelStreamingOptionChainRequest',
+  full_name='blotter.CancelStreamingOptionChainRequest',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='requestID', full_name='blotter.CancelStreamingOptionChainRequest.requestID', index=0,
+      number=1, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      serialized_options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2530,
+  serialized_end=2584,
+)
+
+
+_CANCELSTREAMINGOPTIONCHAINRESPONSE = _descriptor.Descriptor(
+  name='CancelStreamingOptionChainResponse',
+  full_name='blotter.CancelStreamingOptionChainResponse',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  serialized_options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=2586,
+  serialized_end=2622,
+)
+
 _CONTRACTSPECIFIER.fields_by_name['securityType'].enum_type = _CONTRACTSPECIFIER_SECURITYTYPE
 _CONTRACTSPECIFIER.fields_by_name['right'].enum_type = _CONTRACTSPECIFIER_RIGHT
 _CONTRACTSPECIFIER_SECURITYTYPE.containing_type = _CONTRACTSPECIFIER
@@ -867,6 +991,7 @@ _STARTREALTIMEDATAREQUEST.fields_by_name['contractSpecifier'].message_type = _CO
 _STARTREALTIMEDATAREQUEST.fields_by_name['barSource'].enum_type = _STARTREALTIMEDATAREQUEST_BARSOURCE
 _STARTREALTIMEDATAREQUEST_BARSOURCE.containing_type = _STARTREALTIMEDATAREQUEST
 _SNAPSHOTOPTIONCHAINREQUEST.fields_by_name['contractSpecifier'].message_type = _CONTRACTSPECIFIER
+_STARTSTREAMINGOPTIONCHAINREQUEST.fields_by_name['contractSpecifier'].message_type = _CONTRACTSPECIFIER
 DESCRIPTOR.message_types_by_name['ContractSpecifier'] = _CONTRACTSPECIFIER
 DESCRIPTOR.message_types_by_name['Duration'] = _DURATION
 DESCRIPTOR.message_types_by_name['LoadHistoricalDataRequest'] = _LOADHISTORICALDATAREQUEST
@@ -879,6 +1004,10 @@ DESCRIPTOR.message_types_by_name['HealthCheckRequest'] = _HEALTHCHECKREQUEST
 DESCRIPTOR.message_types_by_name['HealthCheckResponse'] = _HEALTHCHECKRESPONSE
 DESCRIPTOR.message_types_by_name['SnapshotOptionChainRequest'] = _SNAPSHOTOPTIONCHAINREQUEST
 DESCRIPTOR.message_types_by_name['SnapshotOptionChainResponse'] = _SNAPSHOTOPTIONCHAINRESPONSE
+DESCRIPTOR.message_types_by_name['StartStreamingOptionChainRequest'] = _STARTSTREAMINGOPTIONCHAINREQUEST
+DESCRIPTOR.message_types_by_name['StartStreamingOptionChainResponse'] = _STARTSTREAMINGOPTIONCHAINRESPONSE
+DESCRIPTOR.message_types_by_name['CancelStreamingOptionChainRequest'] = _CANCELSTREAMINGOPTIONCHAINREQUEST
+DESCRIPTOR.message_types_by_name['CancelStreamingOptionChainResponse'] = _CANCELSTREAMINGOPTIONCHAINRESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
 ContractSpecifier = _reflection.GeneratedProtocolMessageType('ContractSpecifier', (_message.Message,), {
@@ -965,6 +1094,34 @@ SnapshotOptionChainResponse = _reflection.GeneratedProtocolMessageType('Snapshot
   })
 _sym_db.RegisterMessage(SnapshotOptionChainResponse)
 
+StartStreamingOptionChainRequest = _reflection.GeneratedProtocolMessageType('StartStreamingOptionChainRequest', (_message.Message,), {
+  'DESCRIPTOR' : _STARTSTREAMINGOPTIONCHAINREQUEST,
+  '__module__' : 'blotter.blotter_pb2'
+  # @@protoc_insertion_point(class_scope:blotter.StartStreamingOptionChainRequest)
+  })
+_sym_db.RegisterMessage(StartStreamingOptionChainRequest)
+
+StartStreamingOptionChainResponse = _reflection.GeneratedProtocolMessageType('StartStreamingOptionChainResponse', (_message.Message,), {
+  'DESCRIPTOR' : _STARTSTREAMINGOPTIONCHAINRESPONSE,
+  '__module__' : 'blotter.blotter_pb2'
+  # @@protoc_insertion_point(class_scope:blotter.StartStreamingOptionChainResponse)
+  })
+_sym_db.RegisterMessage(StartStreamingOptionChainResponse)
+
+CancelStreamingOptionChainRequest = _reflection.GeneratedProtocolMessageType('CancelStreamingOptionChainRequest', (_message.Message,), {
+  'DESCRIPTOR' : _CANCELSTREAMINGOPTIONCHAINREQUEST,
+  '__module__' : 'blotter.blotter_pb2'
+  # @@protoc_insertion_point(class_scope:blotter.CancelStreamingOptionChainRequest)
+  })
+_sym_db.RegisterMessage(CancelStreamingOptionChainRequest)
+
+CancelStreamingOptionChainResponse = _reflection.GeneratedProtocolMessageType('CancelStreamingOptionChainResponse', (_message.Message,), {
+  'DESCRIPTOR' : _CANCELSTREAMINGOPTIONCHAINRESPONSE,
+  '__module__' : 'blotter.blotter_pb2'
+  # @@protoc_insertion_point(class_scope:blotter.CancelStreamingOptionChainResponse)
+  })
+_sym_db.RegisterMessage(CancelStreamingOptionChainResponse)
+
 
 
 _BLOTTER = _descriptor.ServiceDescriptor(
@@ -973,8 +1130,8 @@ _BLOTTER = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   serialized_options=None,
-  serialized_start=2359,
-  serialized_end=2834,
+  serialized_start=2625,
+  serialized_end=3339,
   methods=[
   _descriptor.MethodDescriptor(
     name='HealthCheck',
@@ -1019,6 +1176,24 @@ _BLOTTER = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_SNAPSHOTOPTIONCHAINREQUEST,
     output_type=_SNAPSHOTOPTIONCHAINRESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='StartStreamingOptionChain',
+    full_name='blotter.Blotter.StartStreamingOptionChain',
+    index=5,
+    containing_service=None,
+    input_type=_STARTSTREAMINGOPTIONCHAINREQUEST,
+    output_type=_STARTSTREAMINGOPTIONCHAINRESPONSE,
+    serialized_options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='CancelStreamingOptionChain',
+    full_name='blotter.Blotter.CancelStreamingOptionChain',
+    index=6,
+    containing_service=None,
+    input_type=_CANCELSTREAMINGOPTIONCHAINREQUEST,
+    output_type=_CANCELSTREAMINGOPTIONCHAINRESPONSE,
     serialized_options=None,
   ),
 ])

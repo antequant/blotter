@@ -138,10 +138,42 @@ stop_parser = subparsers.add_parser(
 
 stop_parser.add_argument("request_id", help="The streaming request to cancel")
 
-snapshot_options_parser = subparsers.add_parser(
-    "snapshot-options",
+options_parser = subparsers.add_parser(
+    "options",
+    help="Options-specific blotting commands",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
+
+options_subparsers = options_parser.add_subparsers(
+    dest="options_command", help="What to do"
+)
+
+snapshot_options_parser = options_subparsers.add_parser(
+    "snapshot",
     help="Snapshot the options chain for the given stock or future",
     formatter_class=ArgumentDefaultsHelpFormatter,
+)
+
+start_streaming_options_parser = options_subparsers.add_parser(
+    "start",
+    help="Start streaming options data",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
+
+start_streaming_options_parser.add_argument(
+    "--polling-interval",
+    help="Interval (in seconds) at which to poll options data",
+    type=int,
+)
+
+stop_streaming_options_parser = options_subparsers.add_parser(
+    "stop",
+    help="Stop streaming options data",
+    formatter_class=ArgumentDefaultsHelpFormatter,
+)
+
+stop_streaming_options_parser.add_argument(
+    "request_id", help="The streaming request to cancel"
 )
 
 
@@ -239,6 +271,39 @@ def snapshot_options(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> Non
     logging.info(f"Importing option chain with job ID: {response.importJobID}")
 
 
+def start_options_streaming(
+    stub: blotter_pb2_grpc.BlotterStub, args: Namespace
+) -> None:
+    request = blotter_pb2.StartStreamingOptionChainRequest(
+        contractSpecifier=contract_specifier_from_args(args),
+    )
+
+    if args.polling_interval:
+        request.pollingInterval = args.polling_interval
+
+    logging.info(f"StartStreamingOptionChain: {request}")
+
+    response = stub.StartStreamingOptionChain(request)
+    print(f"Streaming started with request ID: {response.requestID}")
+
+
+def stop_options_streaming(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
+    request = blotter_pb2.CancelStreamingOptionChainRequest(requestID=args.request_id)
+
+    logging.info(f"CancelStreamingOptionChain: {request}")
+    stub.CancelStreamingOptionChain(request)
+
+
+def handle_options_command(stub: blotter_pb2_grpc.BlotterStub, args: Namespace) -> None:
+    commands = {
+        "snapshot": snapshot_options,
+        "start": start_options_streaming,
+        "stop": stop_options_streaming,
+    }
+
+    commands[args.options_command](stub, args)
+
+
 def main() -> None:
     args = parser.parse_args()
     if args.verbose:
@@ -262,7 +327,7 @@ def main() -> None:
         "start": start_streaming,
         "stop": stop_streaming,
         "ping": ping,
-        "snapshot-options": snapshot_options,
+        "options": handle_options_command,
     }
 
     commands[args.command](stub, args)

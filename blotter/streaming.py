@@ -4,12 +4,13 @@ import math
 from dataclasses import dataclass
 from datetime import timedelta
 from logging import getLogger
-from typing import Any, Dict, Iterator, NewType, Optional
+from typing import Any, Dict, Iterator, NewType, Optional, Union
 
-import ib_insync
 import pandas as pd
 from google.cloud import firestore
 
+import blotter.bigquery_helpers as bigquery_helpers
+import ib_insync
 from blotter.blotter_pb2 import ContractSpecifier
 from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import (
@@ -44,6 +45,20 @@ class _StreamingJob:
     use_regular_trading_hours: bool
     """Argument to `ib_insync.IB.reqRealTimeBars`."""
 
+    @classmethod
+    def from_contract(
+        cls,
+        contract: ib_insync.Contract,
+        bar_source: str,
+        regular_trading_hours_only: bool,
+    ) -> "_StreamingJob":
+        return cls(
+            serialized_contract=serialize_contract(contract),
+            bar_size=5,
+            what_to_show=bar_source,
+            use_regular_trading_hours=regular_trading_hours_only,
+        )
+
     def start_request(self, ib_client: ib_insync.IB) -> ib_insync.RealTimeBarList:
         """
         Submits this streaming request to the given IB client.
@@ -62,12 +77,6 @@ class StreamingManager:
     Manages the lifetime of market data streaming requests.
     """
 
-    _MAX_BIGQUERY_OPERATIONS_PER_DAY = 1000
-    """The maximum number of BigQuery operations permitted per table per day."""
-
-    _PERMITTED_OPERATIONS_PER_DAY = _MAX_BIGQUERY_OPERATIONS_PER_DAY * 0.5
-    """How much of the BigQuery operations allowance to actually use, to leave headroom for other things."""
-
     _BAR_SIZE = timedelta(seconds=5)
     """The granularity of real-time data bars, and (while streaming) how quickly they arrive."""
 
@@ -75,7 +84,7 @@ class StreamingManager:
     """The maximum number of real-time data bars that could be reasonably expected in one day."""
 
     DEFAULT_BATCH_SIZE = math.ceil(
-        _MAXIMUM_BARS_PER_DAY / _PERMITTED_OPERATIONS_PER_DAY
+        _MAXIMUM_BARS_PER_DAY / bigquery_helpers.PERMITTED_OPERATIONS_PER_DAY
     )
     """A reasonable default number of bars to batch together for upload."""
 
@@ -179,7 +188,9 @@ class StreamingManager:
         Returns the final `RealTimeBarList` associated with this ID, if it could be found.
         """
 
-        logger.debug(f"_real_time_bars before cancelling: {self._real_time_bars}")
+        logger.debug(
+            f"{len(self._real_time_bars)} _real_time_bars before cancelling: {self._real_time_bars.keys()}"
+        )
         bar_list = self._real_time_bars.pop(streaming_id, None)
         if bar_list is not None:
             ib_client.cancelRealTimeBars(bar_list)
@@ -190,7 +201,7 @@ class StreamingManager:
     async def start_stream(
         self,
         ib_client: ib_insync.IB,
-        contract_specifier: ContractSpecifier,
+        contract: Union[ib_insync.Contract, ContractSpecifier],
         bar_source: str,
         regular_trading_hours_only: bool,
     ) -> StreamingID:
@@ -202,13 +213,13 @@ class StreamingManager:
         WARNING: This method does no checking for duplicate requests.
         """
 
-        contract = await qualify_contract_specifier(ib_client, contract_specifier)
+        if isinstance(contract, ContractSpecifier):
+            contract = await qualify_contract_specifier(ib_client, contract)
 
-        streaming_job = _StreamingJob(
-            serialized_contract=serialize_contract(contract),
-            bar_size=5,
-            what_to_show=bar_source,
-            use_regular_trading_hours=regular_trading_hours_only,
+        streaming_job = _StreamingJob.from_contract(
+            contract,
+            bar_source=bar_source,
+            regular_trading_hours_only=regular_trading_hours_only,
         )
 
         streaming_id = self._record_job_in_firestore(streaming_job)
@@ -304,7 +315,9 @@ class StreamingManager:
         bar_list = streaming_job.start_request(ib_client)
 
         self._real_time_bars[streaming_id] = bar_list
-        logger.debug(f"_real_time_bars: {self._real_time_bars}")
+        logger.debug(
+            f"{len(self._real_time_bars)} _real_time_bars: {self._real_time_bars.keys()}"
+        )
 
         bar_list.updateEvent += _bars_updated
 

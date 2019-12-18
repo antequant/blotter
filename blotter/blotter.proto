@@ -203,13 +203,55 @@ message HealthCheckRequest {}
 // See the Blotter service below.
 message HealthCheckResponse {}
 
+// See the Blotter service below.
 message SnapshotOptionChainRequest {
+    /*
+     * A description of the underlying contract to snapshot the options chain of.
+     */
     ContractSpecifier contractSpecifier = 1;
 }
 
+// See the Blotter service below.
 message SnapshotOptionChainResponse {
+    /*
+     * A unique ID for the BigQuery data import job that was created.
+     */
     string importJobID = 1;
 }
+
+// See the Blotter service below.
+message StartStreamingOptionChainRequest {
+    /*
+     * A description of the underlying contract for the options chain to stream data of.
+     */
+    ContractSpecifier contractSpecifier = 1;
+
+    /*
+     * The interval (in seconds) at which to poll options data.
+     */
+    int64 pollingInterval = 2;
+}
+
+// See the Blotter service below.
+message StartStreamingOptionChainResponse {
+    /*
+     * A unique ID for the streaming job.
+     *
+     * This ID can later be passed to `CancelStreamingOptionChain` to stop streaming.
+     */
+    string requestID = 1;
+}
+
+// See the Blotter service below.
+message CancelStreamingOptionChainRequest {
+    /*
+     * The unique ID for the streaming job to cancel.
+     */
+    string requestID = 1;
+}
+
+// See the Blotter service below.
+message CancelStreamingOptionChainResponse {}
 
 /*
  * RPC interface to the Blotter microservice, for sending market data to BigQuery.
@@ -237,5 +279,20 @@ service Blotter {
      */
     rpc CancelRealTimeData(CancelRealTimeDataRequest) returns (CancelRealTimeDataResponse) {}
 
+    /*
+     * Loads the option chain for an underlying contract, pulls quotes for every options contract, then enqueues a job to import them into the appropriate BigQuery table.
+     */
     rpc SnapshotOptionChain(SnapshotOptionChainRequest) returns (SnapshotOptionChainResponse) {}
+
+    /*
+     * Streams periodic quotes for the option chain of an underlying contract into the appropriate BigQuery table.
+     *
+     * No guarantees are made about the latency of the BigQuery import, so this is not suitable for hard-real-time trading use cases.
+     */
+    rpc StartStreamingOptionChain(StartStreamingOptionChainRequest) returns (StartStreamingOptionChainResponse) {}
+
+    /*
+     * Cancels a previous real-time data subscription. Any outstanding BigQuery uploads will still complete.
+     */
+    rpc CancelStreamingOptionChain(CancelStreamingOptionChainRequest) returns (CancelStreamingOptionChainResponse) {}
 }
