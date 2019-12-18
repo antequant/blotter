@@ -12,7 +12,8 @@ from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.backfill import backfill_bars
 from blotter.error_handling import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBThread, qualify_contract_specifier
-from blotter.options import look_up_options, snapshot_options
+from blotter.options import snapshot_options, start_polling_options
+from blotter.polling import PollingID, PollingManager
 from blotter.streaming import StreamingID, StreamingManager
 
 logger = getLogger(__name__)
@@ -58,6 +59,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
         self._ib_thread = ib_thread
         self._streaming_manager = streaming_manager
+        self._polling_manager = PollingManager(error_handler)
         self._error_handler = error_handler
         super().__init__()
 
@@ -68,6 +70,8 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
 
         streaming_ids = list(self._streaming_manager.resume_streaming(self._ib_thread))
         logger.info(f"Resumed streaming IDs {streaming_ids}")
+
+        # TODO: Resume things on PollingManager too
 
     def _run_in_ib_thread(
         self, fn: Callable[[ib_insync.IB], Awaitable[_T]]
@@ -197,34 +201,18 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.StartStreamingOptionChainResponse:
         logger.info(f"StartStreamingOptionChain: {request}")
 
-        async def _start_stream(ib_client: ib_insync.IB) -> StreamingID:
-            underlying = await qualify_contract_specifier(
-                ib_client, request.contractSpecifier
+        async def _start_polling(ib_client: ib_insync.IB) -> PollingID:
+            return await start_polling_options(
+                self._polling_manager,
+                PollingManager.DEFAULT_POLLING_INTERVAL,
+                ib_client,
+                request.contractSpecifier,
             )
-            options_contracts = await look_up_options(ib_client, underlying)
 
-            bar_source = request_helpers.real_time_bar_source_str(
-                blotter_pb2.StartRealTimeDataRequest.BarSource.TRADES
-            )
-            regular_trading_hours_only = False
+        polling_id = self._run_in_ib_thread(_start_polling).result()
+        logger.debug(f"Real-time bars streaming ID: {polling_id}")
 
-            ids = await asyncio.gather(
-                *(
-                    self._streaming_manager.start_stream(
-                        ib_client,
-                        contract=contract,
-                        bar_source=bar_source,
-                        regular_trading_hours_only=regular_trading_hours_only,
-                    )
-                    for contract in options_contracts
-                )
-            )
-            return StreamingID(", ".join(ids))
-
-        streaming_id = self._run_in_ib_thread(_start_stream).result()
-        logger.debug(f"Real-time bars streaming ID: {streaming_id}")
-
-        return blotter_pb2.StartStreamingOptionChainResponse(requestID=streaming_id)
+        return blotter_pb2.StartStreamingOptionChainResponse(requestID=polling_id)
 
     def CancelStreamingOptionChain(
         self,
@@ -233,10 +221,10 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
     ) -> blotter_pb2.CancelStreamingOptionChainResponse:
         logger.info(f"CancelStreamingOptionChain: {request}")
 
-        async def _cancel_stream(ib_client: ib_insync.IB) -> None:
-            await self._streaming_manager.cancel_stream(
-                ib_client, streaming_id=StreamingID(request.requestID)
+        async def _cancel_polling(ib_client: ib_insync.IB) -> None:
+            await self._polling_manager.cancel_polling(
+                ib_client, polling_id=PollingID(request.requestID)
             )
 
-        self._run_in_ib_thread(_cancel_stream)
+        self._run_in_ib_thread(_cancel_polling)
         return blotter_pb2.CancelStreamingOptionChainResponse()
