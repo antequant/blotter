@@ -15,6 +15,7 @@ from typing import (
     Optional,
     TypeVar,
     Union,
+    cast
 )
 
 import ib_insync.util
@@ -59,7 +60,7 @@ async def qualify_contract_specifier(
 
 
 def serialize_contract(contract: Contract) -> Dict[str, Any]:
-    return contract.dict()
+    return cast(Dict[str, Any], contract.dict())
 
 
 def deserialize_contract(d: Dict[str, Any]) -> Contract:
