@@ -59,7 +59,7 @@ async def qualify_contract_specifier(
 
 
 def serialize_contract(contract: Contract) -> Dict[str, Any]:
-    return asdict(contract)
+    return contract.dict()
 
 
 def deserialize_contract(d: Dict[str, Any]) -> Contract:
