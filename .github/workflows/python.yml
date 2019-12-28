@@ -67,7 +67,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - uses: antequant/google-container-registry-push-action@master
+    - uses: antequant/google-container-registry-push-action@v0.1
       with:
         gcp_email: ${{ secrets.GCP_USER }}
         gcp_token: ${{ secrets.GCP_TOKEN }}
