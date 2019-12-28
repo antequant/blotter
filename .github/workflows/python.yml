@@ -52,7 +52,7 @@ jobs:
     - uses: actions/checkout@v1
 
     - name: Push image to GitHub Package Registry
-      uses: antequant/docker-push-action@master
+      uses: antequant/docker-push-action@v0.2
       with:
         docker_server: docker.pkg.github.com
         docker_password: ${{ secrets.GITHUB_TOKEN }}
