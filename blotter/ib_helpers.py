@@ -15,7 +15,7 @@ from typing import (
     Optional,
     TypeVar,
     Union,
-    cast
+    cast,
 )
 
 import ib_insync.util
