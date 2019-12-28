@@ -54,7 +54,7 @@ jobs:
     - name: Push image to GitHub Package Registry
       uses: antequant/docker-github-package-action@master
       with:
-        github_token: secrets.GITHUB_TOKEN
+        github_token: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build Docker image
       run: docker build . -t image
