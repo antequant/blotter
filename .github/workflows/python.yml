@@ -9,7 +9,7 @@ on:
     tags:
       - v*
   
-  pull_request:
+  #pull_request:
 
 jobs:
   build:
