@@ -40,8 +40,9 @@ jobs:
       run: |
         black --check --exclude '(_pb2|ib[-_]insync)' .
 
-  deploy:
+  gpr:
     #needs: build
+    name: Push to GitHub Package Registry
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     env:
@@ -51,36 +52,23 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
-    - name: Push image to GitHub Package Registry
-      uses: antequant/docker-push-action@v0.3
+    - uses: antequant/docker-push-action@v0.3.1
       with:
         docker_server: docker.pkg.github.com
         docker_password: ${{ secrets.GITHUB_TOKEN }}
         image_path: docker.pkg.github.com/${{ github.repository }}
+  
+  gcr:
+    #needs: build
+    name: Push to Google Container Registry
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
 
-    - name: Build Docker image
-      run: docker build . -t image
-    
-    - name: Install Google Cloud SDK
-      run: |
-        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
-        sudo apt-get install apt-transport-https ca-certificates gnupg
+    steps:
+    - uses: actions/checkout@v1
 
-        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
-        sudo apt-get update && sudo apt-get install google-cloud-sdk
-    
-    - name: Log in to Google Cloud
-      run: |
-        yes 'n' | gcloud init
-        cat <<< '${{ secrets.GCP_TOKEN }}' > gcp_token.json
-
-        gcloud auth activate-service-account "${{ secrets.GCP_USER }}" --key-file gcp_token.json
-        yes | gcloud auth configure-docker
-    
-    - name: Push image to Google Container Registry
-      if: github.ref == 'refs/heads/master'
-      run: |
-        GCP_IMAGE_ID="gcr.io/$GCP_PROJECT/$GCP_IMAGE_NAME"
-
-        docker tag image "$GCP_IMAGE_ID:latest"
-        docker push "$GCP_IMAGE_ID:latest"
+    - uses: antequant/google-container-registry-push-action@master
+      with:
+        gcp_email: ${{ secrets.GCP_USER }}
+        gcp_token: ${{ secrets.GCP_TOKEN }}
+        gcp_project: tradesponder
