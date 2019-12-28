@@ -45,9 +45,6 @@ jobs:
     name: Push to GitHub Package Registry
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    env:
-      GCP_PROJECT: tradesponder
-      GCP_IMAGE_NAME: blotter
 
     steps:
     - uses: actions/checkout@v1
