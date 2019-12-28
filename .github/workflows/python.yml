@@ -41,7 +41,7 @@ jobs:
         black --check --exclude '(_pb2|ib[-_]insync)' .
 
   deploy:
-    needs: build
+    #needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     env:
