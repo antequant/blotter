@@ -50,25 +50,13 @@ jobs:
     steps:
     - uses: actions/checkout@v1
 
+    - name: Push image to GitHub Package Registry
+      uses: antequant/docker-github-package-action@master
+      with:
+        github_token: secrets.GITHUB_TOKEN
+
     - name: Build Docker image
       run: docker build . -t image
-
-    - name: Log in to GitHub Package Registry
-      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u "${{ github.actor }}" --password-stdin
-  
-    - name: Push image to GitHub Package Registry
-      run: |
-        IMAGE_NAME=$(basename "${{ github.repository }}")
-        GPR_IMAGE_ID="docker.pkg.github.com/${{ github.repository }}/$IMAGE_NAME"
-        VERSION=$(basename "${{ github.ref }}")
-
-        if [ "$VERSION" == "master" ]
-        then
-          VERSION=latest
-        fi
-
-        docker tag image "$GPR_IMAGE_ID:$VERSION"
-        docker push "$GPR_IMAGE_ID:$VERSION"
     
     - name: Install Google Cloud SDK
       run: |
