@@ -24,7 +24,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        git credential fill <<<__EOF__
+        git credential fill <<__EOF__
         protocol=https
         host=github.com
         username=${{ secrets.PIP_GITHUB_USER }}
