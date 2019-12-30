@@ -9,7 +9,7 @@ from google.cloud import firestore
 
 import blotter.bigquery_helpers as bigquery_helpers
 import ib_insync
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBThread, deserialize_contract, serialize_contract
 from blotter.tickers import load_tickers_into_dataframe
 from blotter.upload import upload_dataframe

@@ -5,7 +5,7 @@ import ib_insync
 import pandas as pd
 from google.cloud import bigquery
 
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 
 logger = getLogger(__name__)
 

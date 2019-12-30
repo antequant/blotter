@@ -8,7 +8,7 @@ from google.cloud import bigquery
 
 from blotter import request_helpers
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 from blotter.ib_helpers import DataError, qualify_contract_specifier
 from blotter.upload import BarsTableColumn, table_name_for_contract, upload_dataframe
 

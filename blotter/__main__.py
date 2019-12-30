@@ -9,7 +9,7 @@ from types import TracebackType
 from typing import Type
 
 import ib_insync
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBError, IBThread, IBWarning
 from blotter.server import Servicer
 from blotter.streaming import StreamingManager

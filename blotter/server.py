@@ -10,7 +10,7 @@ from google.cloud import bigquery
 import ib_insync
 from blotter import blotter_pb2, blotter_pb2_grpc, request_helpers
 from blotter.backfill import backfill_bars
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBThread, qualify_contract_specifier
 from blotter.options import snapshot_options, start_polling_options
 from blotter.polling import PollingID, PollingManager
