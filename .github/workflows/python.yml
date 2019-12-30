@@ -24,6 +24,7 @@ jobs:
 
     - name: Install dependencies
       run: |
+        git config credential.helper store
         git credential fill <<__EOF__
         protocol=https
         host=github.com
