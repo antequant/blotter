@@ -46,6 +46,14 @@ jobs:
     - name: Check formatting
       run: |
         black --check --exclude '(_pb2|ib[-_]insync)' .
+  
+  docker_build:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push'
+
+    steps:
+    - uses: actions/checkout@v2
+    - run: docker build .
 
   gpr:
     needs: build
