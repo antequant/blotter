@@ -8,7 +8,8 @@ WORKDIR /usr/src/path
 COPY LICENSE LICENSE
 COPY README.md README.md
 COPY setup.py setup.py
-RUN pip install --only-binary pyarrow --no-cache-dir .
+COPY wheels wheels
+RUN pip install --only-binary pyarrow --no-cache-dir --find-links=wheels .
 
 COPY blotter blotter
 
