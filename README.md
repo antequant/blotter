@@ -1,6 +1,8 @@
 # blotter
 Microservice to connect to Interactive Brokers and stream market data into Google BigQuery
 
+See the @antequant [Python project conventions](https://github.com/antequant/conventions/wiki/Python) for how to clone and set up this repository for development.
+
 ## Building
 
 ```sh
