@@ -16,18 +16,18 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-
-    - name: Set up Python
-      uses: actions/setup-python@v1
-      with:
-        python-version: 3.7
     
     - name: Checkout antequant/gcloud-service
       uses: actions/checkout@v2
       with:
         repository: 'antequant/gcloud-service'
-        token: ${{ secrets.PIP_GITHUB_PASSWORD }}
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
         path: 'gcloud-service'
+
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
 
     - name: Install dependencies
       run: |
