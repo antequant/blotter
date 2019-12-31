@@ -80,7 +80,7 @@ class Servicer(blotter_pb2_grpc.BlotterServicer):
         Schedules work on the `IBThread` for this service, reporting any exceptions that occur.
         """
 
-        fut = self._ib_thread.schedule(fn)
+        fut = self._ib_thread.schedule_async(fn)
 
         def _report_future_exception(future: "concurrent.futures.Future[_T]") -> None:
             with self._error_handler(f"Exception thrown in IB thread:"):

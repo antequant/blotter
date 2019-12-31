@@ -155,7 +155,7 @@ class StreamingManager:
             logger.info(
                 f"Resuming streaming for {streaming_job} with ID {streaming_id}"
             )
-            ib_thread.schedule(_resume_job)
+            ib_thread.schedule_async(_resume_job)
             yield streaming_id
 
     def _record_job_in_firestore(self, job: _StreamingJob) -> StreamingID:

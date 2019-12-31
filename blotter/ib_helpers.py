@@ -1,7 +1,7 @@
 import asyncio
 import concurrent.futures
 import math
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from decimal import Decimal
 from typing import (
     Any,
@@ -18,11 +18,12 @@ from typing import (
     cast,
 )
 
-import ib_insync.util
 import pandas as pd
-from ib_insync import IB, Contract, ContractDetails, Ticker
 
+import ib_insync.util
+from asyncio_resource import Resource
 from blotter import blotter_pb2, request_helpers
+from ib_insync import IB, Contract, ContractDetails, Ticker
 
 
 @dataclass(frozen=True)
@@ -165,7 +166,7 @@ class DataError(Exception):
         return f"{type(self)}: {self.message}"
 
 
-class IBThread:
+class IBThread(Resource[IB]):
     """
     Abstracts over the ib_insync client and its attachment to a specific thread/event loop.
 
@@ -178,9 +179,6 @@ class IBThread:
         error_handler: Callable[[Union[Exception, IBError]], None],
         loop: asyncio.AbstractEventLoop = asyncio.get_event_loop(),
     ):
-        self._client = client
-        self._loop = loop
-
         def _ib_error_event_handler(
             reqId: int, errorCode: int, errorString: str, contract: Optional[Contract]
         ) -> None:
@@ -207,34 +205,22 @@ class IBThread:
 
             error_handler(err)
 
-        def _install_error_handlers() -> None:
+        def _install_error_handlers(client: IB) -> None:
             ib_insync.util.globalErrorEvent += error_handler
-            self._client.errorEvent += _ib_error_event_handler
+            client.errorEvent += _ib_error_event_handler
 
-        self._loop.call_soon_threadsafe(_install_error_handlers)
-
-        super().__init__()
+        super().__init__(resource=client, loop=loop)
+        self.schedule(_install_error_handlers)
 
     def run_forever(self) -> NoReturn:
         """
         Takes over the current thread to run the event loop, and all ib_insync operations upon it.
         """
+
+        # FIXME: This is accessing a private field
         assert (
             asyncio.get_event_loop() == self._loop
         ), "IBThread.run_forever() should be invoked on the event loop it is attached to"
 
-        self._client.run()
-        assert False, "IB.run() should never return"
-
-    def schedule(
-        self, fn: Callable[[IB], Awaitable[_T]]
-    ) -> "concurrent.futures.Future[_T]":
-        """
-        Schedules an async operation on the IB event loop, providing the client.
-        """
-
-        # This is formally a coroutine to asyncio, so should help ensure that we run `fn` only on the event loop, as opposed to the calling thread of `schedule()` (but ihavenoideawhatimdoing.gif)
-        async def invoke() -> _T:
-            return await fn(self._client)
-
-        return asyncio.run_coroutine_threadsafe(invoke(), self._loop)
+        ib_insync.util.run()
+        assert False, "run() should never return"
