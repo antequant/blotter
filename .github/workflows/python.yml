@@ -61,9 +61,7 @@ jobs:
         repository: 'antequant/gcloud-service'
         token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
         path: 'packages/gcloud-service'
-
-    - working-directory: ./packages/gcloud-service
-      run: git fetch --unshallow
+        fetch-depth: 0
 
     - run: docker build .
 
@@ -75,6 +73,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Checkout antequant/gcloud-service
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/gcloud-service'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/gcloud-service'
+        fetch-depth: 0
 
     - uses: antequant/docker-push-action@v0.3.1
       with:
@@ -90,6 +96,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+
+    - name: Checkout antequant/gcloud-service
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/gcloud-service'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/gcloud-service'
+        fetch-depth: 0
 
     - uses: antequant/google-container-registry-push-action@v0.1
       with:
