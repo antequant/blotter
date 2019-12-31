@@ -6,7 +6,7 @@ from google.cloud import bigquery
 
 import ib_insync
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 from blotter.ib_helpers import qualify_contract_specifier
 from blotter.polling import PollingID, PollingManager
 from blotter.tickers import load_tickers_into_dataframe

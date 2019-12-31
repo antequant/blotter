@@ -9,12 +9,11 @@ from types import TracebackType
 from typing import Type
 
 import ib_insync
-
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 from blotter.ib_helpers import IBError, IBThread, IBWarning
-from blotter.logging import configure_package_logger, configure_root_logger
 from blotter.server import Servicer
 from blotter.streaming import StreamingManager
+from gcloud_service.logging import configure_package_logger, configure_root_logger
 
 logger = getLogger(__package__)
 

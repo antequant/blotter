@@ -12,7 +12,7 @@ from google.cloud import firestore
 import blotter.bigquery_helpers as bigquery_helpers
 import ib_insync
 from blotter.blotter_pb2 import ContractSpecifier
-from blotter.error_handling import ErrorHandlerConfiguration
+from gcloud_service.error_handler import ErrorHandlerConfiguration
 from blotter.ib_helpers import (
     IBThread,
     deserialize_contract,
