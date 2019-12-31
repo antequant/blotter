@@ -32,7 +32,8 @@ setup(
         "Topic :: Office/Business :: Financial :: Investment",
     ],
     install_requires=[
-        "gcloud_service ~= 0.1",
+        "asyncio-resource ~= 0.1",
+        "gcloud-service ~= 0.1",
         "google-cloud-bigquery ~= 1.22",
         "google-cloud-error-reporting ~= 0.33",
         "google-cloud-firestore ~= 1.6",

@@ -1,3 +1,6 @@
 [submodule "gcloud-service"]
 	path = packages/gcloud-service
 	url = https://github.com/antequant/gcloud-service
+[submodule "packages/asyncio-resource"]
+	path = packages/asyncio-resource
+	url = https://github.com/antequant/asyncio-resource
