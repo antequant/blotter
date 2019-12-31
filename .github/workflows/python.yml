@@ -23,9 +23,7 @@ jobs:
         repository: 'antequant/gcloud-service'
         token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
         path: 'packages/gcloud-service'
-
-    - working-directory: ./packages/gcloud-service
-      run: git fetch --unshallow
+        fetch-depth: 0
 
     - name: Set up Python
       uses: actions/setup-python@v1
