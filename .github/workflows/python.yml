@@ -21,18 +21,18 @@ jobs:
       uses: actions/setup-python@v1
       with:
         python-version: 3.7
+    
+    - name: Checkout antequant/gcloud-service
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/gcloud-service'
+        token: ${{ secrets.PIP_GITHUB_PASSWORD }}
+        path: 'gcloud-service'
 
     - name: Install dependencies
       run: |
-        git config credential.helper store
-        git credential fill <<__EOF__
-        protocol=https
-        host=github.com
-        username=${{ secrets.PIP_GITHUB_USER }}
-        password=${{ secrets.PIP_GITHUB_PASSWORD }}
-        __EOF__
-
         python -m pip install --upgrade pip
+        pip install -e git+file://gcloud-service#egg=gcloud_service
         pip install -r requirements.txt
 
     - name: Type-check
