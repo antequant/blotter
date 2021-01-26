@@ -1,0 +1,144 @@
+name: Python
+
+on:
+  push:
+    branches:
+      - master
+    
+    tags:
+      - v*
+  
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Checkout antequant/asyncio-resource
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/asyncio-resource'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/asyncio-resource'
+        fetch-depth: 0
+    
+    - name: Checkout antequant/gcloud-service
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/gcloud-service'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/gcloud-service'
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: 3.7
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install packages/*
+        pip install -r requirements.txt
+
+    - name: Type-check
+      run: |
+        mypy .
+
+    - name: Test
+      run: |
+        python -m unittest -v
+
+    - name: Check formatting
+      run: |
+        black --check --exclude '(_pb2|ib[-_]insync)' .
+  
+  docker_build:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'push'
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Checkout antequant/asyncio-resource
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/asyncio-resource'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/asyncio-resource'
+        fetch-depth: 0
+
+    - name: Checkout antequant/gcloud-service
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/gcloud-service'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/gcloud-service'
+        fetch-depth: 0
+
+    - run: docker build .
+
+  gpr:
+    needs: build
+    name: Push to GitHub Package Registry
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Checkout antequant/asyncio-resource
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/asyncio-resource'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/asyncio-resource'
+        fetch-depth: 0
+
+    - name: Checkout antequant/gcloud-service
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/gcloud-service'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/gcloud-service'
+        fetch-depth: 0
+
+    - uses: antequant/docker-push-action@v0.3.1
+      with:
+        docker_server: docker.pkg.github.com
+        docker_password: ${{ secrets.GITHUB_TOKEN }}
+        image_path: docker.pkg.github.com/${{ github.repository }}
+  
+  gcr:
+    needs: build
+    name: Push to Google Container Registry
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Checkout antequant/asyncio-resource
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/asyncio-resource'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/asyncio-resource'
+        fetch-depth: 0
+
+    - name: Checkout antequant/gcloud-service
+      uses: actions/checkout@v2
+      with:
+        repository: 'antequant/gcloud-service'
+        token: ${{ secrets.ANTEQUANT_GITHUB_TOKEN }}
+        path: 'packages/gcloud-service'
+        fetch-depth: 0
+
+    - uses: antequant/google-container-registry-push-action@v0.1
+      with:
+        gcp_email: ${{ secrets.GCP_USER }}
+        gcp_token: ${{ secrets.GCP_TOKEN }}
+        gcp_project: tradesponder

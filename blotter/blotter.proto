@@ -1,0 +1,298 @@
+syntax = "proto3";
+package blotter;
+
+/*
+ * Describes a contract prior to looking up its exact ID.
+ */
+message ContractSpecifier {
+    /*
+     * The type of instrument referred to.
+     */
+    enum SecurityType {
+        STOCK = 0;
+        OPTION = 1;
+        FUTURE = 2;
+        INDEX = 3;
+        FUTURES_OPTION = 4;
+        CASH = 5;
+        CFD = 6;
+        COMBO = 7;
+        WARRANT = 8;
+        BOND = 9;
+        COMMODITY = 10;
+        NEWS = 11;
+        FUND = 12;
+    }
+
+    /*
+     * The right afforded by the contract (for options, warrants, etc.)
+     */
+    enum Right {
+        UNSPECIFIED_RIGHT = 0;
+        PUT = 1;
+        CALL = 2;
+    }
+
+    // See ib_insync.Contract for more information on these fields.
+    string symbol = 1;
+    SecurityType securityType = 2;
+    string lastTradeDateOrContractMonth = 3;
+    string strike = 4;
+    Right right = 5;
+    string multiplier = 6;
+    string exchange = 7;
+    string currency = 8;
+    string localSymbol = 9;
+    string primaryExchange = 10;
+    string tradingClass = 11;
+    bool includeExpired = 12;
+}
+
+/*
+ * Describes a period (interval) of time.
+ */
+message Duration {
+    enum TimeUnit {
+        SECONDS = 0;
+        DAYS = 1;
+        WEEKS = 2;
+        MONTHS = 3;
+        YEARS = 4;
+    }
+
+    int32 count = 1;
+    TimeUnit unit = 2;
+}
+
+// See the Blotter service below.
+message LoadHistoricalDataRequest {
+    /*
+     * The interval of trades/quotes to capture within each bar.
+     */
+    enum BarSize {
+        UNSPECIFIED_SIZE = 0;
+        ONE_SECOND = 1;
+        FIVE_SECONDS = 5;
+        TEN_SECONDS = 10;
+        FIFTEEN_SECONDS = 15;
+        THIRTY_SECONDS = 30;
+        ONE_MINUTE = 60;
+        TWO_MINUTES = 120;
+        THREE_MINUTES = 180;
+        FIVE_MINUTES = 300;
+        TEN_MINUTES = 600;
+        FIFTEEN_MINUTES = 900;
+        TWENTY_MINUTES = 1200;
+        THIRTY_MINUTES = 1800;
+        ONE_HOUR = 3600;
+        TWO_HOURS = 7200;
+        THREE_HOURS = 10800;
+        FOUR_HOURS = 14400;
+        EIGHT_HOURS = 28800;
+        ONE_DAY = 86400;
+        ONE_WEEK = 604800;
+        ONE_MONTH = 2592000;
+    }
+
+    /*
+     * The "source" of the bar (i.e., what data the bar is populated with).
+     */
+    enum BarSource {
+        UNSPECIFIED_SOURCE = 0;
+        TRADES = 1;
+        MIDPOINT = 2;
+        BID = 3;
+        ASK = 4;
+        BID_ASK = 5;
+        ADJUSTED_LAST = 6;
+        HISTORICAL_VOLATILITY = 7;
+        OPTION_IMPLIED_VOLATILITY = 8;
+        REBATE_RATE = 9;
+        FEE_RATE = 10;
+        YIELD_BID = 11;
+        YIELD_ASK = 12;
+        YIELD_BID_ASK = 13;
+        YIELD_LAST = 14;
+    }
+
+    /*
+     * A description of the contract to retrieve bars for.
+     */
+    ContractSpecifier contractSpecifier = 1;
+
+    /*
+     * A POSIX timestamp, in UTC, representing the date and time to backfill up until.
+     *
+     * In other words, backfilling will obtain bars prior to this moment.
+     */
+    int64 endTimestampUTC = 2;
+
+    /*
+     * The length of time to backfill, counting backwards from `endTimestampUTC`.
+     */
+    Duration duration = 3;
+
+    BarSize barSize = 4;
+
+    BarSource barSource = 5;
+
+    /*
+     * Whether to only load bars that occurred within regular trading hours. If false, bars outside of regular trading hours will also be included.
+     */
+    bool regularTradingHoursOnly = 6;
+}
+
+// See the Blotter service below.
+message LoadHistoricalDataResponse {
+    /*
+     * A unique ID for the BigQuery data import job that was created.
+     */
+    string backfillJobID = 1;
+}
+
+// See the Blotter service below.
+message StartRealTimeDataRequest {
+    /*
+     * The "source" of the bar (i.e., what data the bar is populated with).
+     */
+    enum BarSource {
+        UNSPECIFIED_SOURCE = 0;
+        TRADES = 1;
+        MIDPOINT = 2;
+        BID = 3;
+        ASK = 4;
+    }
+
+    /*
+     * A description of the contract to start streaming bars for.
+     */
+    ContractSpecifier contractSpecifier = 1;
+
+    BarSource barSource = 2;
+
+    /*
+     * Whether to only load bars that occur within regular trading hours. If false, bars outside of regular trading hours will also be included.
+     */
+    bool regularTradingHoursOnly = 3;
+}
+
+// See the Blotter service below.
+message StartRealTimeDataResponse {
+    /*
+     * A unique ID for the streaming job.
+     *
+     * This ID can later be passed to `CancelRealTimeData` to stop streaming.
+     */
+    string requestID = 1;
+}
+
+// See the Blotter service below.
+message CancelRealTimeDataRequest {
+    /*
+     * The unique ID for the streaming job to cancel.
+     */
+    string requestID = 1;
+}
+
+// See the Blotter service below.
+message CancelRealTimeDataResponse {}
+
+// See the Blotter service below.
+message HealthCheckRequest {}
+
+// See the Blotter service below.
+message HealthCheckResponse {}
+
+// See the Blotter service below.
+message SnapshotOptionChainRequest {
+    /*
+     * A description of the underlying contract to snapshot the options chain of.
+     */
+    ContractSpecifier contractSpecifier = 1;
+}
+
+// See the Blotter service below.
+message SnapshotOptionChainResponse {
+    /*
+     * A unique ID for the BigQuery data import job that was created.
+     */
+    string importJobID = 1;
+}
+
+// See the Blotter service below.
+message StartStreamingOptionChainRequest {
+    /*
+     * A description of the underlying contract for the options chain to stream data of.
+     */
+    ContractSpecifier contractSpecifier = 1;
+
+    /*
+     * The interval (in seconds) at which to poll options data.
+     */
+    int64 pollingInterval = 2;
+}
+
+// See the Blotter service below.
+message StartStreamingOptionChainResponse {
+    /*
+     * A unique ID for the streaming job.
+     *
+     * This ID can later be passed to `CancelStreamingOptionChain` to stop streaming.
+     */
+    string requestID = 1;
+}
+
+// See the Blotter service below.
+message CancelStreamingOptionChainRequest {
+    /*
+     * The unique ID for the streaming job to cancel.
+     */
+    string requestID = 1;
+}
+
+// See the Blotter service below.
+message CancelStreamingOptionChainResponse {}
+
+/*
+ * RPC interface to the Blotter microservice, for sending market data to BigQuery.
+ */
+service Blotter {
+    /*
+     * Pings the server to check that it is online and ready to accept requests.
+     */
+    rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
+
+    /*
+     * Loads historical bars for a contract, then enqueues one or more jobs to import them into the appropriate BigQuery table.
+     */
+    rpc LoadHistoricalData(LoadHistoricalDataRequest) returns (stream LoadHistoricalDataResponse) {}
+
+    /*
+     * Subscribes to real-time data for a contract, streaming bars into the appropriate BigQuery table.
+     *
+     * No guarantees are made about the latency of the BigQuery import, so this is not suitable for hard-real-time trading use cases.
+     */
+    rpc StartRealTimeData(StartRealTimeDataRequest) returns (StartRealTimeDataResponse) {}
+
+    /*
+     * Cancels a previous real-time data subscription. Any outstanding BigQuery uploads will still complete.
+     */
+    rpc CancelRealTimeData(CancelRealTimeDataRequest) returns (CancelRealTimeDataResponse) {}
+
+    /*
+     * Loads the option chain for an underlying contract, pulls quotes for every options contract, then enqueues a job to import them into the appropriate BigQuery table.
+     */
+    rpc SnapshotOptionChain(SnapshotOptionChainRequest) returns (SnapshotOptionChainResponse) {}
+
+    /*
+     * Streams periodic quotes for the option chain of an underlying contract into the appropriate BigQuery table.
+     *
+     * No guarantees are made about the latency of the BigQuery import, so this is not suitable for hard-real-time trading use cases.
+     */
+    rpc StartStreamingOptionChain(StartStreamingOptionChainRequest) returns (StartStreamingOptionChainResponse) {}
+
+    /*
+     * Cancels a previous real-time data subscription. Any outstanding BigQuery uploads will still complete.
+     */
+    rpc CancelStreamingOptionChain(CancelStreamingOptionChainRequest) returns (CancelStreamingOptionChainResponse) {}
+}
